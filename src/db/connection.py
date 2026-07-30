@@ -7,6 +7,7 @@ load_dotenv()
 
 
 class DatabaseConnection:
+
     def __init__(self):
         self.connection = None
 
@@ -29,6 +30,20 @@ class DatabaseConnection:
 
     def get_connection(self):
         return self.connection
+
+    def get_connection_uri(self):
+        """
+        Returns PostgreSQL connection URI.
+        Used by LangGraph PostgresSaver.
+        """
+        return (
+            f"postgresql://"
+            f"{os.getenv('DB_USER')}:"
+            f"{os.getenv('DB_PASSWORD')}@"
+            f"{os.getenv('DB_HOST')}:"
+            f"{os.getenv('DB_PORT')}/"
+            f"{os.getenv('DB_NAME')}"
+        )
 
     def close(self):
         if self.connection:

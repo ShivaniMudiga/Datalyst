@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from src.agent.tools import FUNCTION_MAP
 from src.graph.state import AgentState
-from src.llm.zen_client import chat
+from src.llm.zen_client import chat, SYSTEM_PROMPT
 
 
 def _field(value: Any, name: str, default: Any = None) -> Any:
@@ -43,11 +43,45 @@ def _assistant_message(message: Any) -> dict[str, Any]:
     return result
 
 
-def call_llm(state: AgentState) -> dict[str, list[dict[str, Any]]]:
-    """Ask the existing OpenCode Zen client for the next assistant message."""
-    message = chat(state["messages"])
-    return {"messages": [_assistant_message(message)]}
+# def call_llm(state: AgentState):
+    llm_messages = [
+        {
+            "role": "system",
+            "content": SYSTEM_PROMPT,
+        }
+    ] + state["messages"]
 
+    print("\n===== Messages sent to LLM =====")
+
+    for i, m in enumerate(llm_messages):
+        print(f"\nMessage {i}:")
+        print(m)
+
+    print("\n===============================\n")
+
+    message = chat(llm_messages)
+
+    return {
+        "messages": [
+            _assistant_message(message)
+        ]
+    }
+
+def call_llm(state: AgentState):
+
+    print("\n===== STATE RECEIVED =====")
+
+    for i, msg in enumerate(state["messages"]):
+        print(f"\n{i}")
+        print(msg)
+
+    print("==========================")
+
+    message = chat(state["messages"])
+
+    return {
+        "messages": [_assistant_message(message)]
+    }
 
 def execute_tools(state: AgentState) -> dict[str, list[dict[str, Any]]]:
     """Run every tool requested by the latest assistant message."""
