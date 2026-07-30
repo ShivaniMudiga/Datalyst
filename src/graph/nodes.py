@@ -69,13 +69,13 @@ def _assistant_message(message: Any) -> dict[str, Any]:
 
 def call_llm(state: AgentState):
 
-    print("\n===== STATE RECEIVED =====")
+    # print("\n===== STATE RECEIVED =====")
 
-    for i, msg in enumerate(state["messages"]):
-        print(f"\n{i}")
-        print(msg)
+    # for i, msg in enumerate(state["messages"]):
+    #     print(f"\n{i}")
+    #     print(msg)
 
-    print("==========================")
+    # print("==========================")
 
     message = chat(state["messages"])
 
