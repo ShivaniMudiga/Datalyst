@@ -1,4 +1,7 @@
-from src.agent.agent import ask
+from src.agent.agent import ConversationalAgent
+
+
+agent = ConversationalAgent()
 
 while True:
 
@@ -7,7 +10,7 @@ while True:
     if question.lower() == "exit":
         break
 
-    answer = ask(question)
+    answer = agent.ask(question)
 
     print("\nAssistant:")
     print(answer)

@@ -1,62 +1,33 @@
-import json
+"""High-level conversational facade for the LangGraph agent."""
 
-from mcp_server import (
-    get_tables,
-    get_columns,
-    execute_sql
-)
-
-from src.llm.zen_client import (
-    chat,
-    SYSTEM_PROMPT
-)
+from src.graph.graph_builder import build_agent_graph
+from src.agent.tools import FUNCTION_MAP
+from src.graph.state import AgentState
+from src.llm.zen_client import SYSTEM_PROMPT
 
 
-FUNCTION_MAP = {
-    "get_tables": get_tables,
-    "get_columns": get_columns,
-    "execute_sql": execute_sql
-}
+class ConversationalAgent:
+    """Keeps LangGraph message state for the lifetime of the process."""
 
-
-def ask(prompt: str):
-
-    messages = [
-        {
-            "role": "system",
-            "content": SYSTEM_PROMPT
-        },
-        {
-            "role": "user",
-            "content": prompt
+    def __init__(self) -> None:
+        self._graph = build_agent_graph()
+        self._state: AgentState = {
+            "messages": [{"role": "system", "content": SYSTEM_PROMPT}]
         }
-    ]
 
-    while True:
+    def ask(self, prompt: str) -> str:
+        """Run one conversational turn and retain it for later follow-ups."""
+        self._state["messages"].append({"role": "user", "content": prompt})
+        self._state = self._graph.invoke(self._state)
+        final_message = self._state["messages"][-1]
+        if isinstance(final_message, dict):
+            return str(final_message.get("content") or "")
+        return str(getattr(final_message, "content", "") or "")
 
-        message = chat(messages)
 
-        # Final answer from the model
-        if not message.tool_calls:
-            return message.content
+_default_agent = ConversationalAgent()
 
-        # Store assistant message
-        messages.append(message)
 
-        # Execute all requested tools
-        for tool_call in message.tool_calls:
-
-            tool_name = tool_call.function.name
-
-            arguments = json.loads(tool_call.function.arguments)
-
-            result = FUNCTION_MAP[tool_name](**arguments)
-
-            # Return tool result to the model
-            messages.append(
-                {
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": json.dumps(result, default=str)
-                }
-            )
+def ask(prompt: str) -> str:
+    """Backward-compatible entry point backed by one persistent agent."""
+    return _default_agent.ask(prompt)
