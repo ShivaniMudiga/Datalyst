@@ -83,10 +83,12 @@ def call_llm(state: AgentState):
         "messages": [_assistant_message(message)]
     }
 
-def execute_tools(state: AgentState) -> dict[str, list[dict[str, Any]]]:
+def execute_tools(state: AgentState) -> dict[str, Any]:
     """Run every tool requested by the latest assistant message."""
     assistant_message = state["messages"][-1]
     tool_messages: list[dict[str, Any]] = []
+    execution_result: Any = None
+    executed_sql = False
 
     for tool_call in _field(assistant_message, "tool_calls", []) or []:
         function = _field(tool_call, "function")
@@ -103,6 +105,13 @@ def execute_tools(state: AgentState) -> dict[str, list[dict[str, Any]]]:
             # Tool failures are returned to the model so it can correct and retry.
             result = {"status": "tool_error", "message": str(error)}
 
+        # A response may request schema tools before or after SQL. Capture only
+        # the SQL tool output, and retain the final SQL result if it is called
+        # more than once in a single node execution.
+        if tool_name == "execute_sql":
+            execution_result = result
+            executed_sql = True
+
         tool_messages.append(
             {
                 "role": "tool",
@@ -111,7 +120,10 @@ def execute_tools(state: AgentState) -> dict[str, list[dict[str, Any]]]:
             }
         )
 
-    return {"messages": tool_messages}
+    update: dict[str, Any] = {"messages": tool_messages}
+    if executed_sql:
+        update["execution_result"] = execution_result
+    return update
 
 
 def should_continue(state: AgentState) -> Literal["execute_tools", "end"]:

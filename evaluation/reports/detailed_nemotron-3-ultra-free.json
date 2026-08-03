@@ -1,0 +1,1442 @@
+[
+  {
+    "test_id": 1,
+    "question": "Show all employees.",
+    "expected_result": [
+      {
+        "employee_id": 1,
+        "first_name": "John",
+        "last_name": "Smith",
+        "email": "john@company.com",
+        "phone": "9999999999",
+        "salary": "90000.00",
+        "hire_date": "2022-01-10",
+        "job_title": "Engineering Manager",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": null
+      },
+      {
+        "employee_id": 2,
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "email": "alice@company.com",
+        "phone": "8888888888",
+        "salary": "70000.00",
+        "hire_date": "2023-05-14",
+        "job_title": "Software Engineer",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": 1
+      },
+      {
+        "employee_id": 3,
+        "first_name": "Bob",
+        "last_name": "Wilson",
+        "email": "bob@company.com",
+        "phone": "7777777777",
+        "salary": "68000.00",
+        "hire_date": "2023-07-01",
+        "job_title": "Software Engineer",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": 1
+      },
+      {
+        "employee_id": 4,
+        "first_name": "Shivani",
+        "last_name": "Mudiga",
+        "email": "shivani@excers.com",
+        "phone": "7013418370",
+        "salary": "20000.00",
+        "hire_date": "2026-07-27",
+        "job_title": null,
+        "status": "Active",
+        "department_id": null,
+        "manager_id": null
+      }
+    ],
+    "agent_result": [
+      {
+        "employee_id": 1,
+        "first_name": "John",
+        "last_name": "Smith",
+        "email": "john@company.com",
+        "phone": "9999999999",
+        "salary": "90000.00",
+        "hire_date": "2022-01-10",
+        "job_title": "Engineering Manager",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": null
+      },
+      {
+        "employee_id": 2,
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "email": "alice@company.com",
+        "phone": "8888888888",
+        "salary": "70000.00",
+        "hire_date": "2023-05-14",
+        "job_title": "Software Engineer",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": 1
+      },
+      {
+        "employee_id": 3,
+        "first_name": "Bob",
+        "last_name": "Wilson",
+        "email": "bob@company.com",
+        "phone": "7777777777",
+        "salary": "68000.00",
+        "hire_date": "2023-07-01",
+        "job_title": "Software Engineer",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": 1
+      },
+      {
+        "employee_id": 4,
+        "first_name": "Shivani",
+        "last_name": "Mudiga",
+        "email": "shivani@excers.com",
+        "phone": "7013418370",
+        "salary": "20000.00",
+        "hire_date": "2026-07-27",
+        "job_title": null,
+        "status": "Active",
+        "department_id": null,
+        "manager_id": null
+      }
+    ],
+    "match": true,
+    "latency": 17.753521874999933,
+    "error": null
+  },
+  {
+    "test_id": 2,
+    "question": "Show the first name, last name and email of all employees.",
+    "expected_result": [
+      {
+        "first_name": "John",
+        "last_name": "Smith",
+        "email": "john@company.com"
+      },
+      {
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "email": "alice@company.com"
+      },
+      {
+        "first_name": "Bob",
+        "last_name": "Wilson",
+        "email": "bob@company.com"
+      },
+      {
+        "first_name": "Shivani",
+        "last_name": "Mudiga",
+        "email": "shivani@excers.com"
+      }
+    ],
+    "agent_result": [
+      {
+        "first_name": "John",
+        "last_name": "Smith",
+        "email": "john@company.com"
+      },
+      {
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "email": "alice@company.com"
+      },
+      {
+        "first_name": "Bob",
+        "last_name": "Wilson",
+        "email": "bob@company.com"
+      },
+      {
+        "first_name": "Shivani",
+        "last_name": "Mudiga",
+        "email": "shivani@excers.com"
+      }
+    ],
+    "match": true,
+    "latency": 38.044782749999285,
+    "error": null
+  },
+  {
+    "test_id": 3,
+    "question": "How many employees are there?",
+    "expected_result": [
+      {
+        "total_employees": 4
+      }
+    ],
+    "agent_result": [
+      {
+        "total_employees": 4
+      }
+    ],
+    "match": true,
+    "latency": 6.086481625001397,
+    "error": null
+  },
+  {
+    "test_id": 4,
+    "question": "Show every employee along with their department name.",
+    "expected_result": [
+      {
+        "first_name": "Bob",
+        "last_name": "Wilson",
+        "department_name": "Engineering"
+      },
+      {
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "department_name": "Engineering"
+      },
+      {
+        "first_name": "John",
+        "last_name": "Smith",
+        "department_name": "Engineering"
+      },
+      {
+        "first_name": "Shivani",
+        "last_name": "Mudiga",
+        "department_name": null
+      }
+    ],
+    "agent_result": null,
+    "match": false,
+    "latency": 6.441483624999819,
+    "error": "agent_error: 'NoneType' object is not subscriptable"
+  },
+  {
+    "test_id": 5,
+    "question": "Show the employee with the highest salary.",
+    "expected_result": [
+      {
+        "employee_id": 1,
+        "first_name": "John",
+        "last_name": "Smith",
+        "email": "john@company.com",
+        "phone": "9999999999",
+        "salary": "90000.00",
+        "hire_date": "2022-01-10",
+        "job_title": "Engineering Manager",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": null
+      }
+    ],
+    "agent_result": [
+      {
+        "employee_id": 1,
+        "first_name": "John",
+        "last_name": "Smith",
+        "email": "john@company.com",
+        "salary": "90000.00",
+        "job_title": "Engineering Manager",
+        "hire_date": "2022-01-10",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": null
+      }
+    ],
+    "match": false,
+    "latency": 25.51185387499936,
+    "error": null
+  },
+  {
+    "test_id": 6,
+    "question": "Show all departments.",
+    "expected_result": [
+      {
+        "department_id": 1,
+        "department_name": "AI",
+        "location": "Hyderabad",
+        "budget": "5000000.00"
+      },
+      {
+        "department_id": 2,
+        "department_name": "Engineering",
+        "location": "Bangalore",
+        "budget": "12000000.00"
+      },
+      {
+        "department_id": 3,
+        "department_name": "HR",
+        "location": "Pune",
+        "budget": "1500000.00"
+      },
+      {
+        "department_id": 4,
+        "department_name": "Finance",
+        "location": "Mumbai",
+        "budget": "3000000.00"
+      },
+      {
+        "department_id": 5,
+        "department_name": "Sales",
+        "location": "Delhi",
+        "budget": "4500000.00"
+      },
+      {
+        "department_id": 6,
+        "department_name": "Marketing",
+        "location": "Chennai",
+        "budget": "2500000.00"
+      },
+      {
+        "department_id": 7,
+        "department_name": "Support",
+        "location": "Hyderabad",
+        "budget": "1800000.00"
+      },
+      {
+        "department_id": 8,
+        "department_name": "Operations",
+        "location": "Bangalore",
+        "budget": "3500000.00"
+      }
+    ],
+    "agent_result": [
+      {
+        "department_id": 1,
+        "department_name": "AI",
+        "location": "Hyderabad",
+        "budget": "5000000.00"
+      },
+      {
+        "department_id": 2,
+        "department_name": "Engineering",
+        "location": "Bangalore",
+        "budget": "12000000.00"
+      },
+      {
+        "department_id": 3,
+        "department_name": "HR",
+        "location": "Pune",
+        "budget": "1500000.00"
+      },
+      {
+        "department_id": 4,
+        "department_name": "Finance",
+        "location": "Mumbai",
+        "budget": "3000000.00"
+      },
+      {
+        "department_id": 5,
+        "department_name": "Sales",
+        "location": "Delhi",
+        "budget": "4500000.00"
+      },
+      {
+        "department_id": 6,
+        "department_name": "Marketing",
+        "location": "Chennai",
+        "budget": "2500000.00"
+      },
+      {
+        "department_id": 7,
+        "department_name": "Support",
+        "location": "Hyderabad",
+        "budget": "1800000.00"
+      },
+      {
+        "department_id": 8,
+        "department_name": "Operations",
+        "location": "Bangalore",
+        "budget": "3500000.00"
+      }
+    ],
+    "match": true,
+    "latency": 14.435341833001075,
+    "error": null
+  },
+  {
+    "test_id": 7,
+    "question": "Which department has the highest budget?",
+    "expected_result": [
+      {
+        "department_id": 2,
+        "department_name": "Engineering",
+        "location": "Bangalore",
+        "budget": "12000000.00"
+      }
+    ],
+    "agent_result": null,
+    "match": false,
+    "latency": 8.393166334000853,
+    "error": null
+  },
+  {
+    "test_id": 8,
+    "question": "Show all projects.",
+    "expected_result": [
+      {
+        "project_id": 7,
+        "project_name": "Apollo",
+        "description": "AI Chatbot",
+        "start_date": "2026-01-01",
+        "end_date": "2026-10-01",
+        "budget": "800000.00",
+        "status": "Active",
+        "client_id": 3
+      },
+      {
+        "project_id": 8,
+        "project_name": "VisionX",
+        "description": "Computer Vision",
+        "start_date": "2026-02-01",
+        "end_date": "2026-12-31",
+        "budget": "1200000.00",
+        "status": "Active",
+        "client_id": 5
+      },
+      {
+        "project_id": 9,
+        "project_name": "CloudSync",
+        "description": "Migration Project",
+        "start_date": "2026-03-15",
+        "end_date": "2026-09-15",
+        "budget": "600000.00",
+        "status": "Planning",
+        "client_id": 1
+      }
+    ],
+    "agent_result": [
+      {
+        "project_id": 7,
+        "project_name": "Apollo",
+        "description": "AI Chatbot",
+        "start_date": "2026-01-01",
+        "end_date": "2026-10-01",
+        "budget": "800000.00",
+        "status": "Active",
+        "client_id": 3
+      },
+      {
+        "project_id": 8,
+        "project_name": "VisionX",
+        "description": "Computer Vision",
+        "start_date": "2026-02-01",
+        "end_date": "2026-12-31",
+        "budget": "1200000.00",
+        "status": "Active",
+        "client_id": 5
+      },
+      {
+        "project_id": 9,
+        "project_name": "CloudSync",
+        "description": "Migration Project",
+        "start_date": "2026-03-15",
+        "end_date": "2026-09-15",
+        "budget": "600000.00",
+        "status": "Planning",
+        "client_id": 1
+      }
+    ],
+    "match": true,
+    "latency": 15.424854541999593,
+    "error": null
+  },
+  {
+    "test_id": 9,
+    "question": "Show each project along with its client name.",
+    "expected_result": [
+      {
+        "project_name": "Apollo",
+        "client_name": "Salesforce"
+      },
+      {
+        "project_name": "VisionX",
+        "client_name": "Oracle"
+      },
+      {
+        "project_name": "CloudSync",
+        "client_name": "Microsoft"
+      }
+    ],
+    "agent_result": [
+      {
+        "project_id": 7,
+        "project_name": "Apollo",
+        "description": "AI Chatbot",
+        "start_date": "2026-01-01",
+        "end_date": "2026-10-01",
+        "budget": "800000.00",
+        "status": "Active",
+        "client_name": "Salesforce"
+      },
+      {
+        "project_id": 8,
+        "project_name": "VisionX",
+        "description": "Computer Vision",
+        "start_date": "2026-02-01",
+        "end_date": "2026-12-31",
+        "budget": "1200000.00",
+        "status": "Active",
+        "client_name": "Oracle"
+      },
+      {
+        "project_id": 9,
+        "project_name": "CloudSync",
+        "description": "Migration Project",
+        "start_date": "2026-03-15",
+        "end_date": "2026-09-15",
+        "budget": "600000.00",
+        "status": "Planning",
+        "client_name": "Microsoft"
+      }
+    ],
+    "match": true,
+    "latency": 24.98475483400034,
+    "error": null
+  },
+  {
+    "test_id": 10,
+    "question": "Show every employee along with the project they are assigned to.",
+    "expected_result": [
+      {
+        "first_name": "John",
+        "last_name": "Smith",
+        "project_name": "Apollo"
+      },
+      {
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "project_name": "Apollo"
+      },
+      {
+        "first_name": "Bob",
+        "last_name": "Wilson",
+        "project_name": "VisionX"
+      },
+      {
+        "first_name": "Shivani",
+        "last_name": "Mudiga",
+        "project_name": null
+      }
+    ],
+    "agent_result": [
+      {
+        "employee_id": 1,
+        "first_name": "John",
+        "last_name": "Smith",
+        "email": "john@company.com",
+        "project_name": "Apollo",
+        "role": "Project Manager",
+        "allocation_percentage": 100,
+        "assigned_date": "2026-01-01"
+      },
+      {
+        "employee_id": 2,
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "email": "alice@company.com",
+        "project_name": "Apollo",
+        "role": "Backend Engineer",
+        "allocation_percentage": 100,
+        "assigned_date": "2026-01-01"
+      },
+      {
+        "employee_id": 3,
+        "first_name": "Bob",
+        "last_name": "Wilson",
+        "email": "bob@company.com",
+        "project_name": "VisionX",
+        "role": "AI Engineer",
+        "allocation_percentage": 100,
+        "assigned_date": "2026-02-01"
+      },
+      {
+        "employee_id": 4,
+        "first_name": "Shivani",
+        "last_name": "Mudiga",
+        "email": "shivani@excers.com",
+        "project_name": null,
+        "role": null,
+        "allocation_percentage": null,
+        "assigned_date": null
+      }
+    ],
+    "match": true,
+    "latency": 24.03140470800099,
+    "error": null
+  },
+  {
+    "test_id": 11,
+    "question": "Show employees who are allocated 100 percent to a project.",
+    "expected_result": [
+      {
+        "employee_id": 1,
+        "project_id": 7,
+        "role": "Project Manager",
+        "allocation_percentage": 100,
+        "assigned_date": "2026-01-01"
+      },
+      {
+        "employee_id": 2,
+        "project_id": 7,
+        "role": "Backend Engineer",
+        "allocation_percentage": 100,
+        "assigned_date": "2026-01-01"
+      },
+      {
+        "employee_id": 3,
+        "project_id": 8,
+        "role": "AI Engineer",
+        "allocation_percentage": 100,
+        "assigned_date": "2026-02-01"
+      }
+    ],
+    "agent_result": [
+      {
+        "employee_id": 1,
+        "first_name": "John",
+        "last_name": "Smith",
+        "email": "john@company.com",
+        "project_name": "Apollo",
+        "role": "Project Manager",
+        "allocation_percentage": 100,
+        "assigned_date": "2026-01-01"
+      },
+      {
+        "employee_id": 2,
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "email": "alice@company.com",
+        "project_name": "Apollo",
+        "role": "Backend Engineer",
+        "allocation_percentage": 100,
+        "assigned_date": "2026-01-01"
+      },
+      {
+        "employee_id": 3,
+        "first_name": "Bob",
+        "last_name": "Wilson",
+        "email": "bob@company.com",
+        "project_name": "VisionX",
+        "role": "AI Engineer",
+        "allocation_percentage": 100,
+        "assigned_date": "2026-02-01"
+      }
+    ],
+    "match": false,
+    "latency": 21.832331916999465,
+    "error": null
+  },
+  {
+    "test_id": 12,
+    "question": "How many employee-project assignments exist?",
+    "expected_result": [
+      {
+        "total_assignments": 3
+      }
+    ],
+    "agent_result": [
+      {
+        "total_assignments": 3
+      }
+    ],
+    "match": true,
+    "latency": 12.02876437499981,
+    "error": null
+  },
+  {
+    "test_id": 13,
+    "question": "Show all attendance records.",
+    "expected_result": [
+      {
+        "attendance_id": 1,
+        "employee_id": 2,
+        "attendance_date": "2026-07-20",
+        "check_in": "09:00:00",
+        "check_out": "18:00:00",
+        "work_hours": "9.00"
+      },
+      {
+        "attendance_id": 2,
+        "employee_id": 3,
+        "attendance_date": "2026-07-20",
+        "check_in": "09:15:00",
+        "check_out": "18:10:00",
+        "work_hours": "8.92"
+      }
+    ],
+    "agent_result": [
+      {
+        "attendance_id": 1,
+        "employee_id": 2,
+        "attendance_date": "2026-07-20",
+        "check_in": "09:00:00",
+        "check_out": "18:00:00",
+        "work_hours": "9.00"
+      },
+      {
+        "attendance_id": 2,
+        "employee_id": 3,
+        "attendance_date": "2026-07-20",
+        "check_in": "09:15:00",
+        "check_out": "18:10:00",
+        "work_hours": "8.92"
+      }
+    ],
+    "match": true,
+    "latency": 34.24003741699926,
+    "error": null
+  },
+  {
+    "test_id": 14,
+    "question": "What is the average work hours recorded in attendance?",
+    "expected_result": [
+      {
+        "average_work_hours": "8.9600000000000000"
+      }
+    ],
+    "agent_result": [
+      {
+        "average_work_hours": "8.9600000000000000"
+      }
+    ],
+    "match": true,
+    "latency": 25.104519541000627,
+    "error": null
+  },
+  {
+    "test_id": 15,
+    "question": "Show each employee along with their net salary.",
+    "expected_result": [
+      {
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "net_salary": "68000.00"
+      },
+      {
+        "first_name": "Bob",
+        "last_name": "Wilson",
+        "net_salary": "64500.00"
+      },
+      {
+        "first_name": "Shivani",
+        "last_name": "Mudiga",
+        "net_salary": null
+      },
+      {
+        "first_name": "John",
+        "last_name": "Smith",
+        "net_salary": null
+      }
+    ],
+    "agent_result": [
+      {
+        "employee_id": 1,
+        "first_name": "John",
+        "last_name": "Smith",
+        "email": "john@company.com",
+        "basic_salary": null,
+        "bonus": null,
+        "tax": null,
+        "net_salary": null
+      },
+      {
+        "employee_id": 2,
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "email": "alice@company.com",
+        "basic_salary": "70000.00",
+        "bonus": "5000.00",
+        "tax": "7000.00",
+        "net_salary": "68000.00"
+      },
+      {
+        "employee_id": 3,
+        "first_name": "Bob",
+        "last_name": "Wilson",
+        "email": "bob@company.com",
+        "basic_salary": "68000.00",
+        "bonus": "3000.00",
+        "tax": "6500.00",
+        "net_salary": "64500.00"
+      },
+      {
+        "employee_id": 4,
+        "first_name": "Shivani",
+        "last_name": "Mudiga",
+        "email": "shivani@excers.com",
+        "basic_salary": null,
+        "bonus": null,
+        "tax": null,
+        "net_salary": null
+      }
+    ],
+    "match": true,
+    "latency": 24.006554874998983,
+    "error": null
+  },
+  {
+    "test_id": 16,
+    "question": "What is the highest net salary in the payroll?",
+    "expected_result": [
+      {
+        "highest_net_salary": "68000.00"
+      }
+    ],
+    "agent_result": null,
+    "match": false,
+    "latency": 8.598335708000377,
+    "error": null
+  },
+  {
+    "test_id": 17,
+    "question": "Show employees along with their leave status.",
+    "expected_result": [
+      {
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "leave_type": "Casual",
+        "status": "Approved"
+      },
+      {
+        "first_name": "Bob",
+        "last_name": "Wilson",
+        "leave_type": "Sick",
+        "status": "Approved"
+      },
+      {
+        "first_name": "Shivani",
+        "last_name": "Mudiga",
+        "leave_type": null,
+        "status": null
+      },
+      {
+        "first_name": "John",
+        "last_name": "Smith",
+        "leave_type": null,
+        "status": null
+      }
+    ],
+    "agent_result": [
+      {
+        "employee_id": 1,
+        "first_name": "John",
+        "last_name": "Smith",
+        "email": "john@company.com",
+        "leave_type": null,
+        "start_date": null,
+        "end_date": null,
+        "status": null
+      },
+      {
+        "employee_id": 2,
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "email": "alice@company.com",
+        "leave_type": "Casual",
+        "start_date": "2026-08-01",
+        "end_date": "2026-08-03",
+        "status": "Approved"
+      },
+      {
+        "employee_id": 3,
+        "first_name": "Bob",
+        "last_name": "Wilson",
+        "email": "bob@company.com",
+        "leave_type": "Sick",
+        "start_date": "2026-07-10",
+        "end_date": "2026-07-11",
+        "status": "Approved"
+      },
+      {
+        "employee_id": 4,
+        "first_name": "Shivani",
+        "last_name": "Mudiga",
+        "email": "shivani@excers.com",
+        "leave_type": null,
+        "start_date": null,
+        "end_date": null,
+        "status": null
+      }
+    ],
+    "match": true,
+    "latency": 17.818041250000533,
+    "error": null
+  },
+  {
+    "test_id": 18,
+    "question": "How many leave requests are there?",
+    "expected_result": [
+      {
+        "total_leave_requests": 2
+      }
+    ],
+    "agent_result": [
+      {
+        "total_leave_requests": 2
+      }
+    ],
+    "match": true,
+    "latency": 10.442928292000943,
+    "error": null
+  },
+  {
+    "test_id": 19,
+    "question": "Show all clients.",
+    "expected_result": [
+      {
+        "client_id": 1,
+        "client_name": "Microsoft",
+        "industry": "Technology",
+        "country": "USA",
+        "contact_email": "microsoft@client.com"
+      },
+      {
+        "client_id": 2,
+        "client_name": "Amazon",
+        "industry": "E-Commerce",
+        "country": "USA",
+        "contact_email": "amazon@client.com"
+      },
+      {
+        "client_id": 3,
+        "client_name": "Salesforce",
+        "industry": "CRM",
+        "country": "USA",
+        "contact_email": "salesforce@client.com"
+      },
+      {
+        "client_id": 4,
+        "client_name": "Adobe",
+        "industry": "Software",
+        "country": "USA",
+        "contact_email": "adobe@client.com"
+      },
+      {
+        "client_id": 5,
+        "client_name": "Oracle",
+        "industry": "Cloud",
+        "country": "USA",
+        "contact_email": "oracle@client.com"
+      }
+    ],
+    "agent_result": [
+      {
+        "client_id": 1,
+        "client_name": "Microsoft",
+        "industry": "Technology",
+        "country": "USA",
+        "contact_email": "microsoft@client.com"
+      },
+      {
+        "client_id": 2,
+        "client_name": "Amazon",
+        "industry": "E-Commerce",
+        "country": "USA",
+        "contact_email": "amazon@client.com"
+      },
+      {
+        "client_id": 3,
+        "client_name": "Salesforce",
+        "industry": "CRM",
+        "country": "USA",
+        "contact_email": "salesforce@client.com"
+      },
+      {
+        "client_id": 4,
+        "client_name": "Adobe",
+        "industry": "Software",
+        "country": "USA",
+        "contact_email": "adobe@client.com"
+      },
+      {
+        "client_id": 5,
+        "client_name": "Oracle",
+        "industry": "Cloud",
+        "country": "USA",
+        "contact_email": "oracle@client.com"
+      }
+    ],
+    "match": true,
+    "latency": 14.132885041999543,
+    "error": null
+  },
+  {
+    "test_id": 20,
+    "question": "Show each client along with the number of projects they have.",
+    "expected_result": [
+      {
+        "client_name": "Adobe",
+        "total_projects": 0
+      },
+      {
+        "client_name": "Amazon",
+        "total_projects": 0
+      },
+      {
+        "client_name": "Salesforce",
+        "total_projects": 1
+      },
+      {
+        "client_name": "Microsoft",
+        "total_projects": 1
+      },
+      {
+        "client_name": "Oracle",
+        "total_projects": 1
+      }
+    ],
+    "agent_result": [
+      {
+        "client_id": 1,
+        "client_name": "Microsoft",
+        "project_count": 1
+      },
+      {
+        "client_id": 2,
+        "client_name": "Amazon",
+        "project_count": 0
+      },
+      {
+        "client_id": 3,
+        "client_name": "Salesforce",
+        "project_count": 1
+      },
+      {
+        "client_id": 4,
+        "client_name": "Adobe",
+        "project_count": 0
+      },
+      {
+        "client_id": 5,
+        "client_name": "Oracle",
+        "project_count": 1
+      }
+    ],
+    "match": true,
+    "latency": 15.35769345800145,
+    "error": null
+  },
+  {
+    "test_id": 21,
+    "question": "Show all active employees.",
+    "expected_result": [
+      {
+        "employee_id": 1,
+        "first_name": "John",
+        "last_name": "Smith",
+        "email": "john@company.com",
+        "phone": "9999999999",
+        "salary": "90000.00",
+        "hire_date": "2022-01-10",
+        "job_title": "Engineering Manager",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": null
+      },
+      {
+        "employee_id": 2,
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "email": "alice@company.com",
+        "phone": "8888888888",
+        "salary": "70000.00",
+        "hire_date": "2023-05-14",
+        "job_title": "Software Engineer",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": 1
+      },
+      {
+        "employee_id": 3,
+        "first_name": "Bob",
+        "last_name": "Wilson",
+        "email": "bob@company.com",
+        "phone": "7777777777",
+        "salary": "68000.00",
+        "hire_date": "2023-07-01",
+        "job_title": "Software Engineer",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": 1
+      },
+      {
+        "employee_id": 4,
+        "first_name": "Shivani",
+        "last_name": "Mudiga",
+        "email": "shivani@excers.com",
+        "phone": "7013418370",
+        "salary": "20000.00",
+        "hire_date": "2026-07-27",
+        "job_title": null,
+        "status": "Active",
+        "department_id": null,
+        "manager_id": null
+      }
+    ],
+    "agent_result": [
+      {
+        "employee_id": 1,
+        "first_name": "John",
+        "last_name": "Smith",
+        "email": "john@company.com",
+        "phone": "9999999999",
+        "salary": "90000.00",
+        "hire_date": "2022-01-10",
+        "job_title": "Engineering Manager",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": null
+      },
+      {
+        "employee_id": 2,
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "email": "alice@company.com",
+        "phone": "8888888888",
+        "salary": "70000.00",
+        "hire_date": "2023-05-14",
+        "job_title": "Software Engineer",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": 1
+      },
+      {
+        "employee_id": 3,
+        "first_name": "Bob",
+        "last_name": "Wilson",
+        "email": "bob@company.com",
+        "phone": "7777777777",
+        "salary": "68000.00",
+        "hire_date": "2023-07-01",
+        "job_title": "Software Engineer",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": 1
+      },
+      {
+        "employee_id": 4,
+        "first_name": "Shivani",
+        "last_name": "Mudiga",
+        "email": "shivani@excers.com",
+        "phone": "7013418370",
+        "salary": "20000.00",
+        "hire_date": "2026-07-27",
+        "job_title": null,
+        "status": "Active",
+        "department_id": null,
+        "manager_id": null
+      }
+    ],
+    "match": true,
+    "latency": 24.05962366699896,
+    "error": null
+  },
+  {
+    "test_id": 22,
+    "question": "Show all projects that are currently active.",
+    "expected_result": [
+      {
+        "project_id": 7,
+        "project_name": "Apollo",
+        "description": "AI Chatbot",
+        "start_date": "2026-01-01",
+        "end_date": "2026-10-01",
+        "budget": "800000.00",
+        "status": "Active",
+        "client_id": 3
+      },
+      {
+        "project_id": 8,
+        "project_name": "VisionX",
+        "description": "Computer Vision",
+        "start_date": "2026-02-01",
+        "end_date": "2026-12-31",
+        "budget": "1200000.00",
+        "status": "Active",
+        "client_id": 5
+      }
+    ],
+    "agent_result": [
+      {
+        "project_id": 7,
+        "project_name": "Apollo",
+        "description": "AI Chatbot",
+        "start_date": "2026-01-01",
+        "end_date": "2026-10-01",
+        "budget": "800000.00",
+        "status": "Active",
+        "client_id": 3
+      },
+      {
+        "project_id": 8,
+        "project_name": "VisionX",
+        "description": "Computer Vision",
+        "start_date": "2026-02-01",
+        "end_date": "2026-12-31",
+        "budget": "1200000.00",
+        "status": "Active",
+        "client_id": 5
+      }
+    ],
+    "match": true,
+    "latency": 11.882246791999933,
+    "error": null
+  },
+  {
+    "test_id": 23,
+    "question": "Show the number of employees in each department.",
+    "expected_result": [
+      {
+        "department_name": "Marketing",
+        "employee_count": 0
+      },
+      {
+        "department_name": "Operations",
+        "employee_count": 0
+      },
+      {
+        "department_name": "Finance",
+        "employee_count": 0
+      },
+      {
+        "department_name": "Support",
+        "employee_count": 0
+      },
+      {
+        "department_name": "Engineering",
+        "employee_count": 3
+      },
+      {
+        "department_name": "AI",
+        "employee_count": 0
+      },
+      {
+        "department_name": "Sales",
+        "employee_count": 0
+      },
+      {
+        "department_name": "HR",
+        "employee_count": 0
+      }
+    ],
+    "agent_result": [
+      {
+        "department_id": 1,
+        "department_name": "AI",
+        "employee_count": 0
+      },
+      {
+        "department_id": 2,
+        "department_name": "Engineering",
+        "employee_count": 3
+      },
+      {
+        "department_id": 3,
+        "department_name": "HR",
+        "employee_count": 0
+      },
+      {
+        "department_id": 4,
+        "department_name": "Finance",
+        "employee_count": 0
+      },
+      {
+        "department_id": 5,
+        "department_name": "Sales",
+        "employee_count": 0
+      },
+      {
+        "department_id": 6,
+        "department_name": "Marketing",
+        "employee_count": 0
+      },
+      {
+        "department_id": 7,
+        "department_name": "Support",
+        "employee_count": 0
+      },
+      {
+        "department_id": 8,
+        "department_name": "Operations",
+        "employee_count": 0
+      }
+    ],
+    "match": true,
+    "latency": 10.139026333999936,
+    "error": null
+  },
+  {
+    "test_id": 24,
+    "question": "Show the three highest paid employees.",
+    "expected_result": [
+      {
+        "employee_id": 1,
+        "first_name": "John",
+        "last_name": "Smith",
+        "email": "john@company.com",
+        "phone": "9999999999",
+        "salary": "90000.00",
+        "hire_date": "2022-01-10",
+        "job_title": "Engineering Manager",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": null
+      },
+      {
+        "employee_id": 2,
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "email": "alice@company.com",
+        "phone": "8888888888",
+        "salary": "70000.00",
+        "hire_date": "2023-05-14",
+        "job_title": "Software Engineer",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": 1
+      },
+      {
+        "employee_id": 3,
+        "first_name": "Bob",
+        "last_name": "Wilson",
+        "email": "bob@company.com",
+        "phone": "7777777777",
+        "salary": "68000.00",
+        "hire_date": "2023-07-01",
+        "job_title": "Software Engineer",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": 1
+      }
+    ],
+    "agent_result": [
+      {
+        "employee_id": 1,
+        "first_name": "John",
+        "last_name": "Smith",
+        "email": "john@company.com",
+        "salary": "90000.00",
+        "job_title": "Engineering Manager",
+        "hire_date": "2022-01-10",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": null
+      },
+      {
+        "employee_id": 2,
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "email": "alice@company.com",
+        "salary": "70000.00",
+        "job_title": "Software Engineer",
+        "hire_date": "2023-05-14",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": 1
+      },
+      {
+        "employee_id": 3,
+        "first_name": "Bob",
+        "last_name": "Wilson",
+        "email": "bob@company.com",
+        "salary": "68000.00",
+        "job_title": "Software Engineer",
+        "hire_date": "2023-07-01",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": 1
+      }
+    ],
+    "match": false,
+    "latency": 16.280443583000306,
+    "error": null
+  },
+  {
+    "test_id": 25,
+    "question": "Show all employees hired after January 1, 2023.",
+    "expected_result": [
+      {
+        "employee_id": 2,
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "email": "alice@company.com",
+        "phone": "8888888888",
+        "salary": "70000.00",
+        "hire_date": "2023-05-14",
+        "job_title": "Software Engineer",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": 1
+      },
+      {
+        "employee_id": 3,
+        "first_name": "Bob",
+        "last_name": "Wilson",
+        "email": "bob@company.com",
+        "phone": "7777777777",
+        "salary": "68000.00",
+        "hire_date": "2023-07-01",
+        "job_title": "Software Engineer",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": 1
+      },
+      {
+        "employee_id": 4,
+        "first_name": "Shivani",
+        "last_name": "Mudiga",
+        "email": "shivani@excers.com",
+        "phone": "7013418370",
+        "salary": "20000.00",
+        "hire_date": "2026-07-27",
+        "job_title": null,
+        "status": "Active",
+        "department_id": null,
+        "manager_id": null
+      }
+    ],
+    "agent_result": [
+      {
+        "employee_id": 2,
+        "first_name": "Alice",
+        "last_name": "Brown",
+        "email": "alice@company.com",
+        "salary": "70000.00",
+        "job_title": "Software Engineer",
+        "hire_date": "2023-05-14",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": 1
+      },
+      {
+        "employee_id": 3,
+        "first_name": "Bob",
+        "last_name": "Wilson",
+        "email": "bob@company.com",
+        "salary": "68000.00",
+        "job_title": "Software Engineer",
+        "hire_date": "2023-07-01",
+        "status": "Active",
+        "department_id": 2,
+        "manager_id": 1
+      },
+      {
+        "employee_id": 4,
+        "first_name": "Shivani",
+        "last_name": "Mudiga",
+        "email": "shivani@excers.com",
+        "salary": "20000.00",
+        "job_title": null,
+        "hire_date": "2026-07-27",
+        "status": "Active",
+        "department_id": null,
+        "manager_id": null
+      }
+    ],
+    "match": false,
+    "latency": 23.75659933299903,
+    "error": null
+  }
+]

@@ -2,7 +2,7 @@
 
 from typing import Annotated, Any
 
-from typing_extensions import TypedDict
+from typing_extensions import NotRequired, TypedDict
 
 
 def append_messages(
@@ -25,3 +25,6 @@ class AgentState(TypedDict):
     # Additional fields (for example, ``last_sql`` or ``retry_count``) can be
     # added here later without changing the graph's control flow.
     messages: Annotated[list[dict[str, Any]], append_messages]
+    # Set only when an execute_sql tool call runs.  This lets evaluation inspect
+    # database output without deriving it from tool messages or LLM text.
+    execution_result: NotRequired[Any]

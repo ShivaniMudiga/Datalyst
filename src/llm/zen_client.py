@@ -122,7 +122,7 @@ def chat(messages):
     """
 
     response = client.chat.completions.create(
-        model="north-mini-code-free",
+        model="qwen/qwen3.6-plus-preview:free",
         messages=messages,
         tools=TOOLS
     )

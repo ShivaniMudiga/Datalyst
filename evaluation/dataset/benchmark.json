@@ -1,0 +1,177 @@
+[
+  {
+    "id": 1,
+    "category": "select",
+    "difficulty": "easy",
+    "question": "Show all employees.",
+    "ground_truth_sql": "SELECT * FROM employees;"
+  },
+  {
+    "id": 2,
+    "category": "projection",
+    "difficulty": "easy",
+    "question": "Show the first name, last name and email of all employees.",
+    "ground_truth_sql": "SELECT first_name, last_name, email FROM employees;"
+  },
+  {
+    "id": 3,
+    "category": "aggregation",
+    "difficulty": "easy",
+    "question": "How many employees are there?",
+    "ground_truth_sql": "SELECT COUNT(*) AS total_employees FROM employees;"
+  },
+  {
+    "id": 4,
+    "category": "join",
+    "difficulty": "medium",
+    "question": "Show every employee along with their department name.",
+    "ground_truth_sql": "SELECT e.first_name, e.last_name, d.department_name FROM employees e LEFT JOIN departments d ON e.department_id = d.department_id;"
+  },
+  {
+    "id": 5,
+    "category": "sorting",
+    "difficulty": "medium",
+    "question": "Show the employee with the highest salary.",
+    "ground_truth_sql": "SELECT first_name, last_name, salary FROM employees ORDER BY salary DESC LIMIT 1;"
+  },
+  {
+    "id": 6,
+    "category": "select",
+    "difficulty": "easy",
+    "question": "Show all departments.",
+    "ground_truth_sql": "SELECT * FROM departments;"
+  },
+  {
+    "id": 7,
+    "category": "sorting",
+    "difficulty": "medium",
+    "question": "Which department has the highest budget?",
+    "ground_truth_sql": "SELECT department_name, budget FROM departments ORDER BY budget DESC LIMIT 1;"
+  },
+  {
+    "id": 8,
+    "category": "select",
+    "difficulty": "easy",
+    "question": "Show all projects.",
+    "ground_truth_sql": "SELECT * FROM projects;"
+  },
+  {
+    "id": 9,
+    "category": "join",
+    "difficulty": "medium",
+    "question": "Show each project along with its client name.",
+    "ground_truth_sql": "SELECT p.project_name, c.client_name FROM projects p LEFT JOIN clients c ON p.client_id = c.client_id;"
+  },
+  {
+    "id": 10,
+    "category": "join",
+    "difficulty": "medium",
+    "question": "Show every employee along with the project they are assigned to.",
+    "ground_truth_sql": "SELECT e.first_name, e.last_name, p.project_name FROM employees e LEFT JOIN employee_projects ep ON e.employee_id = ep.employee_id LEFT JOIN projects p ON ep.project_id = p.project_id;"
+  },
+  {
+    "id": 11,
+    "category": "filter",
+    "difficulty": "medium",
+    "question": "Show employees who are allocated 100 percent to a project.",
+    "ground_truth_sql": "SELECT employee_id, project_id, allocation_percentage FROM employee_projects WHERE allocation_percentage = 100;"
+  },
+  {
+    "id": 12,
+    "category": "aggregation",
+    "difficulty": "medium",
+    "question": "How many employee-project assignments exist?",
+    "ground_truth_sql": "SELECT COUNT(*) AS total_assignments FROM employee_projects;"
+  },
+  {
+    "id": 13,
+    "category": "select",
+    "difficulty": "easy",
+    "question": "Show all attendance records.",
+    "ground_truth_sql": "SELECT * FROM attendance;"
+  },
+  {
+    "id": 14,
+    "category": "aggregation",
+    "difficulty": "medium",
+    "question": "What is the average work hours recorded in attendance?",
+    "ground_truth_sql": "SELECT AVG(work_hours) AS average_work_hours FROM attendance;"
+  },
+  {
+    "id": 15,
+    "category": "join",
+    "difficulty": "medium",
+    "question": "Show each employee along with their net salary.",
+    "ground_truth_sql": "SELECT e.first_name, e.last_name, p.net_salary FROM employees e LEFT JOIN payroll p ON e.employee_id = p.employee_id;"
+  },
+  {
+    "id": 16,
+    "category": "aggregation",
+    "difficulty": "medium",
+    "question": "What is the highest net salary in the payroll?",
+    "ground_truth_sql": "SELECT MAX(net_salary) AS highest_net_salary FROM payroll;"
+  },
+  {
+    "id": 17,
+    "category": "join",
+    "difficulty": "medium",
+    "question": "Show employees along with their leave status.",
+    "ground_truth_sql": "SELECT e.first_name, e.last_name, l.leave_type, l.status FROM employees e LEFT JOIN leaves l ON e.employee_id = l.employee_id;"
+  },
+  {
+    "id": 18,
+    "category": "aggregation",
+    "difficulty": "easy",
+    "question": "How many leave requests are there?",
+    "ground_truth_sql": "SELECT COUNT(*) AS total_leave_requests FROM leaves;"
+  },
+  {
+    "id": 19,
+    "category": "select",
+    "difficulty": "easy",
+    "question": "Show all clients.",
+    "ground_truth_sql": "SELECT * FROM clients;"
+  },
+  {
+    "id": 20,
+    "category": "join",
+    "difficulty": "hard",
+    "question": "Show each client along with the number of projects they have.",
+    "ground_truth_sql": "SELECT c.client_name, COUNT(p.project_id) AS total_projects FROM clients c LEFT JOIN projects p ON c.client_id = p.client_id GROUP BY c.client_id, c.client_name;"
+  },
+  {
+    "id": 21,
+    "category": "filter",
+    "difficulty": "easy",
+    "question": "Show all active employees.",
+    "ground_truth_sql": "SELECT * FROM employees WHERE status = 'Active';"
+  },
+  {
+    "id": 22,
+    "category": "filter",
+    "difficulty": "medium",
+    "question": "Show all projects that are currently active.",
+    "ground_truth_sql": "SELECT * FROM projects WHERE status = 'Active';"
+  },
+  {
+    "id": 23,
+    "category": "aggregation",
+    "difficulty": "hard",
+    "question": "Show the number of employees in each department.",
+    "ground_truth_sql": "SELECT d.department_name, COUNT(e.employee_id) AS employee_count FROM departments d LEFT JOIN employees e ON d.department_id = e.department_id GROUP BY d.department_id, d.department_name;"
+  },
+  {
+    "id": 24,
+    "category": "sorting",
+    "difficulty": "medium",
+    "question": "Show the three highest paid employees.",
+    "ground_truth_sql": "SELECT first_name, last_name, salary FROM employees ORDER BY salary DESC LIMIT 3;"
+  },
+  {
+    "id": 25,
+    "category": "filter",
+    "difficulty": "medium",
+    "question": "Show all employees hired after January 1, 2023.",
+    "ground_truth_sql": "SELECT * FROM employees WHERE hire_date > '2023-01-01';"
+  }
+]
