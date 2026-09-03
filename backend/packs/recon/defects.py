@@ -21,6 +21,8 @@ RATES: dict[str, float] = {
     "split": 0.015,         # one capture paid out over 2-3 lines       -> T2
     "fee_residual": 0.012,  # net is off by a few basis points          -> T3
     "fx": 0.004,            # settled in USD, amounts do not equal INR  -> T3
+    "ref_missing": 0.020,   # no gateway reference at all              -> T1b,
+                            # or, with no order reference either, the queue
     "orphan_ledger": 0.008, # captured, never settled       -> a real exception
 }
 
@@ -75,3 +77,26 @@ def drift(reference: str, payment_id: int) -> str:
     else:
         drifted = reference.lower()
     return drifted if drifted != reference else reference.lower()
+
+
+# How a gateway describes a payout line in free text. The first five carry the
+# order id in some human shape; the last two carry only an internal batch
+# number, so anything extracted from them is a false lead that verification has
+# to reject. That is deliberate - R5 asserts the false lead is caught.
+NARRATIONS = (
+    "KARTLY SETTLEMENT ORD {order} BATCH {batch}",
+    "neft/kartly/{order}/{month}",
+    "PAYOUT KRTLY-{order} UPI",
+    "kartly ord no {order} - net of charges",
+    "SETTLE KARTLY REF {order}/{batch}",
+    "CONSOLIDATED PAYOUT KARTLY BATCH {batch}",
+    "SETTLEMENT BATCH {batch} MERCHANT KARTLY",
+)
+
+
+def narration(payment_id: int, order_id: int, month: str) -> str:
+    """The free-text description on a line whose reference went missing."""
+    template = NARRATIONS[int(rnd(f"narr:{payment_id}") * len(NARRATIONS))]
+    return template.format(
+        order=order_id, month=month.split("-")[1], batch=100000 + int(rnd(f"batch:{payment_id}") * 899999)
+    )

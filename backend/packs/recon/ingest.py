@@ -23,7 +23,7 @@ from packs.recon.db import cursor
 
 REQUIRED = {
     "payout_id", "line_seq", "settled_at", "gateway_reference",
-    "order_reference", "currency", "gross_minor", "fee_minor", "net_minor",
+    "order_reference", "currency", "gross_minor", "fee_minor", "net_minor", "narration",
 }
 
 
@@ -86,14 +86,15 @@ def ingest(path: Path) -> dict:
             """
             INSERT INTO settlement_lines
               (payout_id, line_seq, settled_at, gateway_reference, order_reference,
-               currency, gross_minor, fee_minor, net_minor)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+               currency, gross_minor, fee_minor, net_minor, narration)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             [
                 (
                     row["payout_id"], int(row["line_seq"]), row["settled_at"],
                     row["gateway_reference"] or None, row["order_reference"] or None,
-                    row["currency"], int(row["gross_minor"]), int(row["fee_minor"]), int(row["net_minor"]),
+                    row["currency"], int(row["gross_minor"]), int(row["fee_minor"]),
+                    int(row["net_minor"]), row["narration"] or None,
                 )
                 for row in rows
             ],

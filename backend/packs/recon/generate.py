@@ -29,6 +29,7 @@ from packs.recon.defects import (
     USD_PER_INR,
     classify,
     drift,
+    narration,
     rnd,
 )
 
@@ -36,7 +37,7 @@ GATEWAYS = ("razorpay", "payu", "cashfree")
 OUT_DIR = Path(__file__).resolve().parents[3] / "payouts"
 COLUMNS = [
     "payout_id", "line_seq", "settled_at", "gateway_reference",
-    "order_reference", "currency", "gross_minor", "fee_minor", "net_minor",
+    "order_reference", "currency", "gross_minor", "fee_minor", "net_minor", "narration",
 ]
 
 
@@ -61,7 +62,7 @@ def _captured(gateway: str, month: str) -> list[dict]:
         return cur.fetchall()
 
 
-def _lines_for(payment: dict, defect: str) -> list[dict]:
+def _lines_for(payment: dict, defect: str, month: str) -> list[dict]:
     """The settlement lines one captured payment turns into. Usually exactly one."""
     payment_id = payment["payment_id"]
     gross = _minor(payment["amount"])
@@ -76,7 +77,13 @@ def _lines_for(payment: dict, defect: str) -> list[dict]:
         # win for the matcher; these are the lines that have to be earned.
         order_reference = None
 
-    if defect == "ref_drift":
+    if defect == "ref_missing":
+        # The gateway simply did not echo its own reference. Every tier keys on
+        # that reference, so no rule can touch this line unless the merchant's
+        # order id happens to have survived - and roughly a third of the time it
+        # did not, which is what leaves the agent something real to work on.
+        reference = None
+    elif defect == "ref_drift":
         reference = drift(reference, payment_id)
     elif defect == "date_skew":
         settled += timedelta(days=1 + int(rnd(f"skew:{payment_id}") * 3))
@@ -94,6 +101,11 @@ def _lines_for(payment: dict, defect: str) -> list[dict]:
         "gateway_reference": reference,
         "order_reference": order_reference,
         "currency": currency,
+        "narration": (
+            narration(payment_id, payment["order_id"], month)
+            if reference is None
+            else f"SETTLEMENT {reference}"
+        ),
     }
 
     if defect != "split":
@@ -136,6 +148,7 @@ def _orphans(gateway: str, month: str, count: int, seed: int) -> list[dict]:
             "gateway_reference": prefix + f"{int(rnd(key + ':ref') * 1e14):014X}"[:14],
             "order_reference": None,
             "currency": "INR",
+            "narration": f"SETTLEMENT {prefix}{int(rnd(key + ':ref') * 1e14):014X}"[:38],
             "gross_minor": gross,
             "fee_minor": fee,
             "net_minor": gross - fee,
@@ -161,7 +174,7 @@ def generate(gateway: str, month: str) -> dict:
         if defect == "orphan_ledger":
             never_settled.append(payment["payment_id"])
             continue
-        for line in _lines_for(payment, defect):
+        for line in _lines_for(payment, defect, month):
             rows.append(line)
             labels.append((payment["payment_id"], defect))
 

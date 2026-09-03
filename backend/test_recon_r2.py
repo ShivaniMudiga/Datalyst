@@ -21,9 +21,15 @@ from packs.recon.match import run
 OWNS = {
     "T0": {"clean"},
     "T1": {"ref_drift", "date_skew"},
+    "T1b": {"ref_missing"},
     "T2": {"split"},
     "T3": {"fee_residual", "fx"},
 }
+
+# What no rule is expected to reach: the gateway echoed neither its own
+# reference nor the merchant's order id, leaving only free text. Those lines are
+# the agent's work in R3, and a rule quietly solving them would hollow that out.
+NAMELESS = "l.gateway_reference IS NULL AND l.order_reference IS NULL"
 
 
 def one(cur, sql, params=()):
@@ -51,7 +57,7 @@ def main() -> None:
         assert wrong == 0, f"{wrong} matches point at the wrong payment"
 
         # 2. Each tier catches only what it is for. A tier quietly doing the tier
-        #    below's work would show up in R4 as an accuracy figure nobody can explain.
+        #    below's work would show up in R4 as a figure nobody can explain.
         cur.execute("""
             SELECT m.match_tier, b.defect_class, count(*) AS n FROM matches m
             JOIN settlement_lines l ON l.line_id = m.line_id
@@ -63,13 +69,22 @@ def main() -> None:
         for tier, classes in OWNS.items():
             assert seen.get(tier) == classes, f"{tier} caught {seen.get(tier)}, expected {classes}"
 
-        # 3. Recall. Nothing that had a counterpart was left unmatched.
-        missed = one(cur, """
+        # 3. Recall, within the rules' remit. Every line carrying an identifier of
+        #    either kind must be matched.
+        missed = one(cur, f"""
             SELECT count(*) AS value FROM settlement_lines l
             JOIN recon_labels b ON b.payout_id = l.payout_id AND b.line_seq = l.line_seq
-            WHERE b.payment_id IS NOT NULL
+            WHERE b.payment_id IS NOT NULL AND NOT ({NAMELESS})
               AND NOT EXISTS (SELECT 1 FROM matches m WHERE m.line_id = l.line_id)""")
-        assert missed == 0, f"{missed} lines with a real counterpart were not matched"
+        assert missed == 0, f"{missed} identifiable lines were not matched"
+
+        # ...and a line carrying only free text must not be, because no rule here
+        #    reads free text. Reading it is probabilistic, so it has to be
+        #    proposed and verified rather than applied by a rule.
+        guessed = one(cur, f"""
+            SELECT count(*) AS value FROM settlement_lines l
+            JOIN matches m ON m.line_id = l.line_id WHERE {NAMELESS}""")
+        assert guessed == 0, f"{guessed} nameless lines were matched by a rule - that is the agent's work"
 
         # 4. Only splits may claim a payment more than once, and then only as the
         #    whole group. Anything else is one capture being paid twice.
@@ -84,7 +99,7 @@ def main() -> None:
             SELECT count(*) AS value FROM matches m
             JOIN settlement_lines l ON l.line_id = m.line_id
             JOIN payments p ON p.payment_id = m.payment_id
-            WHERE m.match_tier IN ('T0','T1')
+            WHERE m.match_tier IN ('T0','T1','T1b')
               AND (l.gross_minor <> round(p.amount * 100) OR l.fee_minor <> round(p.gateway_fee * 100))""")
         assert untied == 0, f"{untied} exact matches do not tie to the paisa"
 
@@ -99,19 +114,31 @@ def main() -> None:
             ) g WHERE g.gross <> g.want_gross OR g.fee <> g.want_fee""")
         assert untied_groups == 0, f"{untied_groups} split groups do not sum back to their capture"
 
-        # 6. Exceptions are the orphans, and only the orphans, in both directions.
-        wrong_line_exceptions = one(cur, """
+        # 6. The queue holds only what the rules genuinely could not place, and it
+        #    says which of the two problems each line has - they need different work.
+        wrong_line_exceptions = one(cur, f"""
             SELECT count(*) AS value FROM exceptions e
             JOIN settlement_lines l ON l.line_id = e.line_id
             JOIN recon_labels b ON b.payout_id = l.payout_id AND b.line_seq = l.line_seq
-            WHERE b.defect_class <> 'orphan_gateway'""")
+            WHERE b.defect_class <> 'orphan_gateway' AND NOT ({NAMELESS})""")
         assert wrong_line_exceptions == 0, f"{wrong_line_exceptions} matchable lines were sent to the queue"
+
+        cur.execute("SELECT reason_code, count(*) AS n FROM exceptions WHERE line_id IS NOT NULL GROUP BY 1")
+        reasons = {row["reason_code"]: row["n"] for row in cur.fetchall()}
+        assert set(reasons) == {"no_ledger_counterpart", "no_reference"}, f"unexpected reasons: {reasons}"
+
+        nameless_without_narration = one(cur, f"""
+            SELECT count(*) AS value FROM exceptions e
+            JOIN settlement_lines l ON l.line_id = e.line_id
+            WHERE e.reason_code = 'no_reference' AND (l.narration IS NULL OR {NAMELESS} IS NOT TRUE)""")
+        assert nameless_without_narration == 0, "a nameless line reached the queue with nothing to read"
 
         wrong_payment_exceptions = one(cur, """
             SELECT count(*) AS value FROM exceptions e
             WHERE e.payment_id IS NOT NULL AND NOT EXISTS (
               SELECT 1 FROM recon_labels b
-              WHERE b.payment_id = e.payment_id AND b.defect_class = 'orphan_ledger')""")
+              WHERE b.payment_id = e.payment_id
+                AND b.defect_class IN ('orphan_ledger', 'ref_missing'))""")
         assert wrong_payment_exceptions == 0, \
             f"{wrong_payment_exceptions} settled payments were reported unsettled"
 
@@ -138,7 +165,7 @@ def main() -> None:
             "a second pass opened duplicate exceptions"
 
     print(f"ok - {matched}/{lines} lines matched ({matched / lines:.2%}), every match on the right payment")
-    print(f"ok - {exceptions} exceptions, each a genuine orphan, and the pass is idempotent")
+    print(f"ok - {exceptions} exceptions, {reasons['no_reference']} of them nameless and left for the agent")
 
 
 if __name__ == "__main__":

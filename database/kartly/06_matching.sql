@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS matches (
   match_id        bigserial PRIMARY KEY,
   line_id         bigint NOT NULL UNIQUE REFERENCES settlement_lines(line_id) ON DELETE CASCADE,
   payment_id      int    NOT NULL REFERENCES payments(payment_id),
-  match_tier      text   NOT NULL CHECK (match_tier IN ('T0', 'T1', 'T2', 'T3')),
+  match_tier      text   NOT NULL CHECK (match_tier IN ('T0', 'T1', 'T1b', 'T2', 'T3')),
   confidence      numeric(4,3) NOT NULL CHECK (confidence > 0 AND confidence <= 1),
   matched_by      text   NOT NULL DEFAULT 'rule' CHECK (matched_by IN ('rule', 'agent')),
   gross_variance_minor bigint NOT NULL DEFAULT 0,

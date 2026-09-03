@@ -63,6 +63,13 @@ CREATE TABLE IF NOT EXISTS settlement_lines (
   gross_minor       bigint NOT NULL,
   fee_minor         bigint NOT NULL,
   net_minor         bigint NOT NULL,
+  -- Free text, exactly as the gateway wrote it. When a reference is missing
+  -- this is sometimes the only clue to what the line is, and it is the one
+  -- field in the file no rule should try to parse: the formats vary, some
+  -- carry a batch number rather than an order id, and a wrong extraction moves
+  -- money. Reading it is the agent's job in R3; verifying what it read is the
+  -- committer's.
+  narration         text,
   UNIQUE (payout_id, line_seq)
 );
 

@@ -5,10 +5,11 @@ predictable. The tiers run in order, each one considering only what the tier
 above left behind, and each stamps the tier and a confidence on what it claims -
 so a disputed match can be traced to the rule that made it, not to a prompt.
 
-  T0  the line ties completely and arrived on time      confidence 1.000
-  T1  the reference had to be normalised, or it was late          0.950
-  T2  several lines sum to one capture                            0.900
-  T3  the money is off by less than a tolerance band              0.850 / 0.800
+  T0   the line ties completely and arrived on time     confidence 1.000
+  T1   the reference had to be normalised, or it was late          0.950
+  T1b  no gateway reference at all - the order id carried it       0.880
+  T2   several lines sum to one capture                            0.900
+  T3   the money is off by less than a tolerance band     0.850 / 0.800
 
 Whatever survives all four is an exception, on either side: a payout line with
 no counterpart in the ledger, or a capture the gateway never settled. Those are
@@ -42,7 +43,7 @@ FEE_TOLERANCE_FLOOR_MINOR = 100  # 1 rupee, so small captures are not scored on 
 USD_PER_INR = 0.0120
 FX_TOLERANCE_PCT = 0.01
 
-CONFIDENCE = {"T0": 1.000, "T1": 0.950, "T2": 0.900, "T3_fee": 0.850, "T3_fx": 0.800}
+CONFIDENCE = {"T0": 1.000, "T1": 0.950, "T1b": 0.880, "T2": 0.900, "T3_fee": 0.850, "T3_fx": 0.800}
 
 UNCLAIMED = """
   AND NOT EXISTS (SELECT 1 FROM matches m WHERE m.line_id = l.line_id)
@@ -72,7 +73,30 @@ INSERT INTO matches (line_id, payment_id, match_tier, confidence)
 SELECT l.line_id, p.payment_id, 'T1', {CONFIDENCE['T1']}
 FROM settlement_lines l
 JOIN payments p ON recon_core(p.gateway_reference) = recon_core(l.gateway_reference)
-WHERE l.currency = 'INR'
+WHERE l.gateway_reference IS NOT NULL
+  AND l.currency = 'INR'
+  AND l.gross_minor = round(p.amount * 100)
+  AND l.fee_minor   = round(p.gateway_fee * 100)
+  AND l.settled_at <= p.captured_at + interval '{LATE_DAYS} days'
+  {UNCLAIMED}
+"""
+
+# -------------------------------------------------------------------- T1b
+# The gateway did not echo its own reference. The merchant's order id is a
+# weaker key - it identifies an order, not an attempt, and an order can have
+# several - so this insists the amount ties exactly and that exactly one
+# captured attempt on that order is still unclaimed. Lower confidence than T1
+# because the evidence is genuinely thinner, not as a formality.
+T1B = f"""
+INSERT INTO matches (line_id, payment_id, match_tier, confidence)
+SELECT l.line_id, p.payment_id, 'T1b', {CONFIDENCE['T1b']}
+FROM settlement_lines l
+JOIN payments p ON p.order_id = substring(l.order_reference from 6)::int
+WHERE l.gateway_reference IS NULL
+  AND l.order_reference LIKE 'KTLY-%'
+  AND l.currency = 'INR'
+  AND p.payment_status = 'captured'
+  AND p.gateway_reference IS NOT NULL
   AND l.gross_minor = round(p.amount * 100)
   AND l.fee_minor   = round(p.gateway_fee * 100)
   AND l.settled_at <= p.captured_at + interval '{LATE_DAYS} days'
@@ -97,6 +121,7 @@ WITH grouped AS (
          array_agg(l.line_id) AS line_ids
   FROM settlement_lines l
   WHERE l.currency = 'INR'
+    AND l.gateway_reference IS NOT NULL
     AND NOT EXISTS (SELECT 1 FROM matches m WHERE m.line_id = l.line_id)
   GROUP BY 1
   HAVING count(*) >= 2
@@ -122,7 +147,8 @@ SELECT l.line_id, p.payment_id, 'T3', {CONFIDENCE['T3_fee']},
        l.fee_minor - round(p.gateway_fee * 100)
 FROM settlement_lines l
 JOIN payments p ON recon_core(p.gateway_reference) = recon_core(l.gateway_reference)
-WHERE l.currency = 'INR'
+WHERE l.gateway_reference IS NOT NULL
+  AND l.currency = 'INR'
   AND l.gross_minor = round(p.amount * 100)
   AND abs(l.fee_minor - round(p.gateway_fee * 100))
       <= greatest({FEE_TOLERANCE_FLOOR_MINOR}, round(l.gross_minor * {FEE_TOLERANCE_BPS} / 10000.0))
@@ -139,20 +165,24 @@ SELECT l.line_id, p.payment_id, 'T3', {CONFIDENCE['T3_fx']},
        l.gross_minor - round(round(p.amount * 100) * {USD_PER_INR})
 FROM settlement_lines l
 JOIN payments p ON recon_core(p.gateway_reference) = recon_core(l.gateway_reference)
-WHERE l.currency <> 'INR'
+WHERE l.gateway_reference IS NOT NULL
+  AND l.currency <> 'INR'
   AND abs(l.gross_minor - round(round(p.amount * 100) * {USD_PER_INR}))
       <= greatest(2, round(l.gross_minor * {FX_TOLERANCE_PCT}))
   AND l.settled_at <= p.captured_at + interval '{LATE_DAYS} days'
   {UNCLAIMED}
 """
 
-TIERS = (("T0", T0), ("T1", T1), ("T2", T2), ("T3 fee", T3_FEE), ("T3 fx", T3_FX))
+TIERS = (("T0", T0), ("T1", T1), ("T1b", T1B), ("T2", T2), ("T3 fee", T3_FEE), ("T3 fx", T3_FX))
 
 # ------------------------------------------------------------- exceptions
 # A payout line the ledger cannot account for.
 UNMATCHED_LINES = """
 INSERT INTO exceptions (line_id, reason_code, amount_minor)
-SELECT l.line_id, 'no_ledger_counterpart', l.net_minor
+SELECT l.line_id,
+       CASE WHEN l.gateway_reference IS NULL THEN 'no_reference'
+            ELSE 'no_ledger_counterpart' END,
+       l.net_minor
 FROM settlement_lines l
 WHERE NOT EXISTS (SELECT 1 FROM matches m WHERE m.line_id = l.line_id)
   AND NOT EXISTS (SELECT 1 FROM exceptions e WHERE e.line_id = l.line_id)

@@ -89,6 +89,23 @@ def main() -> None:
             WHERE b.defect_class = 'orphan_ledger'""")
         assert settled_orphans == 0, f"{settled_orphans} orphan_ledger payments were settled after all"
 
+        # Every line carries the gateway's free text, and a reference-less line
+        # carries nothing else to go on.
+        no_narration = one(cur, "SELECT count(*) AS value FROM settlement_lines WHERE narration IS NULL")
+        assert no_narration == 0, f"{no_narration} lines have no narration"
+
+        still_referenced = one(cur, """
+            SELECT count(*) AS value FROM recon_labels b
+            JOIN settlement_lines l USING (payout_id, line_seq)
+            WHERE b.defect_class = 'ref_missing' AND l.gateway_reference IS NOT NULL""")
+        assert still_referenced == 0, f"{still_referenced} ref_missing lines kept their reference"
+
+        # The residual the agent works in R3: no reference, no order id, only text.
+        blind = one(cur, """
+            SELECT count(*) AS value FROM settlement_lines
+            WHERE gateway_reference IS NULL AND order_reference IS NULL""")
+        assert blind > 0, "no reference-less lines - R3 has nothing to investigate"
+
         # Money never became a float, and net always ties to gross less fee.
         broken_net = one(cur, "SELECT count(*) AS value FROM settlement_lines WHERE net_minor <> gross_minor - fee_minor")
         assert broken_net == 0, f"{broken_net} lines where net <> gross - fee"
@@ -132,6 +149,7 @@ def main() -> None:
             raise AssertionError("data_runtime_reader can read recon_labels - the model can see the answer key")
 
     print(f"ok - {lines} settlement lines across {len(batches)} payouts, every defect class present and honest")
+    print(f"ok - {blind} lines carry only free text, which is R3's residual")
     print("ok - the reader role can see settlements and cannot see the answer key")
 
 

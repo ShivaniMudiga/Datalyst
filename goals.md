@@ -216,13 +216,14 @@ table.
 
 | Tier | Rule | Confidence | Caught |
 |---|---|---|---|
-| T0 | reference exact · gross and fee tie to the paisa · settled by T+2 | 1.000 | 4,182 |
+| T0 | reference exact · gross and fee tie to the paisa · settled by T+2 | 1.000 | 4,090 |
 | T1 | reference normalised, or late — money still ties exactly | 0.950 | 231 |
+| T1b | no gateway reference; the merchant's order id carried it | 0.880 | 46 |
 | T2 | 2–3 lines sharing a reference sum to one capture, gross *and* fee | 0.900 | 149 |
 | T3 | fee inside a 25bp band (0.850), or settled in USD (0.800) | 0.850 / 0.800 | 66 |
-| — | no counterpart either way | — | **49 exceptions** |
+| — | no counterpart, or no name at all | — | **132 exceptions** |
 
-**Match rate 99.63% — 4,628 of 4,645 lines — in 0.6s**, including interpreter
+**Match rate 98.84% — 4,582 of 4,636 lines — in 0.6s**, including interpreter
 start, over 60,072 candidate captures.
 
 **Normalisation is one rule.** Every reference here is a per-gateway prefix plus
@@ -249,9 +250,10 @@ at least half that month's captures matched by these lines. Below that the file
 is only brushing the period and its silence about the rest says nothing. Exactly
 32 now, all in the month being reconciled.
 
-**Done when:** ✅ `python test_recon_r2.py` → *ok - 4628/4645 lines matched
-(99.63%), every match on the right payment* / *ok - 49 exceptions, each a genuine
-orphan, and the pass is idempotent*.
+**Done when:** ✅ `python test_recon_r2.py` → *ok - 4582/4636 lines matched
+(98.84%), every match on the right payment* / *ok - 132 exceptions, 37 of them
+nameless and left for the agent*. Verified again on a database rebuilt from the
+SQL files alone, and the whole suite — 9 of 9 — passes.
 
 The eight assertions, in order: the matcher never reads the labels · every match
 names the payment that truly issued that line · each tier caught only its own
@@ -260,7 +262,51 @@ twice outside T2 · exact tiers tie to the paisa and split groups sum back · th
 queue holds only genuine orphans, in both directions · and no line is left
 neither matched nor queued. Re-running over its own output changes nothing.
 
-### Known — the residual is too easy for R3
+### Making the residual real — `ref_missing` and the narration field
+
+The first pass scored precision and recall of 1.000, which is a warning rather
+than a victory: the tiers were built against defects built to be caught, so
+nothing was genuinely ambiguous and R3's agent had nothing to do but
+rubber-stamp orphans. Fixed here, and the fix changed shape once on contact with
+the data.
+
+**The obvious fix did not work.** Dropping the gateway reference from ~2% of
+lines left them resolvable by amount and date alone — measured, and every one of
+the 37 had *exactly one* candidate capture. Kartly's order totals are
+fine-grained enough that only 6 payments in the whole month share an amount with
+a peer within five days. **No amount-based defect can ever justify an agent
+here**, and a judge would rightly say the residual should be an algorithm.
+
+**Where a model actually beats a rule is unstructured text.** So a payout line
+now carries `narration` — the gateway's free text, exactly as written. A
+reference-less line's narration is the only clue to what it is, in seven human
+shapes:
+
+```
+KARTLY SETTLEMENT ORD 68854 BATCH 952959     order id, plus a decoy number
+neft/kartly/68318/07                          order id in the third field
+kartly ord no 70571 - net of charges          order id in prose
+SETTLE KARTLY REF 68948/156205                order id first, batch second
+CONSOLIDATED PAYOUT KARTLY BATCH 495628       no order id at all - a false lead
+SETTLEMENT BATCH 735287 MERCHANT KARTLY       no order id at all - a false lead
+```
+
+Of the 37 nameless lines, **18 carry an order id somewhere and 19 carry only a
+batch number.** A regex that grabs the first integer proposes a wrong link on
+the second group — which is the point. Extraction is probabilistic, so it must
+be *proposed and verified*, never applied by a rule. That is R3's architecture
+in one sentence, and `test_recon_r2.py` now asserts no rule ever matches a
+nameless line.
+
+Rules that *can* be written still are: T1b resolves the 46 reference-less lines
+whose order id survived in a structured field, at 0.880 rather than 0.950
+because an order id names an order, not an attempt.
+
+The queue now separates the two problems it holds — `no_ledger_counterpart` (17
+lines with a name and no counterpart) and `no_reference` (37 with a counterpart
+and no name) — because they need different work.
+
+### Superseded — why 1.000 was a problem
 
 Precision and recall are both 1.000, which is a *warning*, not a victory. The
 tiers were designed against defects the generator was designed to plant, and
@@ -274,21 +320,15 @@ consequences:
   the only honest proposals are `escalate` and `write_off`. Rubber-stamping is
   not a demo of bounded agency.
 
-Both point at the same missing defect class: **`ref_missing`** — the gateway
-omits its own reference. Every tier here keys on the reference core, so no rule
-can touch those lines, and resolving one means reasoning over amount, date and
-whatever `order_reference` survived — which is exactly the agent's job. See the
-top of R3.
+Both were fixed by the section above. The headline match rate fell from 99.63%
+to 98.84% — a more credible number, not a worse one.
 
 ## Phase R3 — Proposal and gate (2 days) ← the skin-in-the-game column
 
-**Prerequisite, carried from R2: add a `ref_missing` defect class to R1's
-generator.** Roughly 1% of lines lose their `gateway_reference` entirely. No tier
-can match them, so they land in the queue as *ambiguous* rather than orphaned —
-several candidate captures with the same amount in the same window — which is
-the only shape of work that makes a proposing agent worth building. Expect the
-headline match rate to fall from 99.63% to about 98.5%; that is a more credible
-number, not a worse one.
+**The residual is ready.** 37 nameless lines carrying only free text, 18 of
+which hide an order id and 19 of which are false leads. The agent reads the
+narration; the committer verifies what it read. See R2's *Making the residual
+real*.
 
 **Goal:** the agent proposes; a deterministic committer applies. This phase is the
 entire safety score, and it replaces §19's "write mode is not in the MVP".
