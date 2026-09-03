@@ -86,37 +86,80 @@ puts the matching in SQL where no model can get it wrong. That is a stronger ans
 to a judge than a better model would have been. Revisit only if R4's eval shows the
 model, not the rules, is the accuracy ceiling.
 
-## Phase R1 — The two sources (1 day)
+## Phase R1 — The two sources — **DONE**
 
-**Goal:** a settlement file is just another `DataSource`. This is the payoff for
-having written `src/datasource/base.py` as a protocol.
+**Goal:** a settlement file is just another source. Kartly is the internal
+ledger; the gateway sends a payout file that disagrees with it.
 
-**Head start — `database/kartly/`.** A marketplace with a full payments stack is
-already seeded there: `payments` (gateway, `gateway_fee`, `captured_at`,
-`attempt_no` for retries, `payment_status`), `refunds` with `settled_at`, plus
-`orders`, `returns` and `shipments`. **That is the internal ledger side already
-built.** Kartly becomes the ledger; R1 shrinks to generating the gateway's payout
-file against it and injecting the defects. Roughly half a day, not a full one.
-It is also already granted to `data_runtime_reader` (`kartly/04_grants.sql`).
+- [x] `database/kartly/05_reconciliation.sql` — `payments.gateway_reference`
+      (deterministic, unique, captured non-COD only), `settlement_batches`,
+      `settlement_lines`, `recon_labels`, indexes and grants. Money is integer
+      minor units throughout; `recon_labels` is deliberately **not** granted to
+      `data_runtime_reader`, so the model cannot read the answer key.
+- [x] `packs/recon/defects.py` — the defect model, rates in one visible dict.
+- [x] `packs/recon/generate.py` — builds the payout CSV from captured payments
+      and writes ground truth per line as it goes.
+- [x] `packs/recon/ingest.py` — CSV → tables, `sha256` of the file bytes unique
+      on the batch, so a replay is a no-op that says so. `--reset` for dev.
+- [x] `test_recon_r1.py` — the self-check below.
 
-- [ ] Ledger side: use `kartly.payments` as-is. Add only what reconciliation needs
-      and kartly lacks — a stable `gateway_reference` per captured payment.
-- [ ] `database/kartly/05_settlements.sql` — the gateway's payout file:
-      `settlement_lines` (payout_id, settled_at, gross_minor, fee_minor, net_minor,
-      currency, gateway_reference, order_reference), generated from captured
-      payments so the *correct* answer is known by construction. That construction
-      is what makes R4's labelling tractable.
-- [ ] Seed them *with deliberate defects*, because clean data proves nothing:
-      split settlements (N ledger lines → 1 payout), FX pairs, fee-only residuals,
-      references with prefix/case/punctuation drift, a ±2-day timing skew, a handful
-      of genuine orphans on both sides, and one duplicated payout file.
-- [ ] `packs/recon/ingest.py` — load a settlement CSV into `settlement_lines`,
-      stamping a `file_hash` and `ingested_at`.
+**COD is out of scope on both sides.** A courier collects it and remits
+separately; it never reaches a gateway payout file. That removes 13,998
+payments that would otherwise be noise.
 
-**Done when:** one command loads both sources, and a hand-written SQL count shows
-the planted defect classes are present in the numbers you expect.
+### What one month looks like — 2026-07, all three gateways
 
----
+4,645 settlement lines from 4,579 captured payments across three files,
+₹12,483,330 net settled.
+
+| Class | Lines | Share | Aimed at |
+|---|---|---|---|
+| `clean` | 4,182 | 89.4% | T0 exact |
+| `split` | 149 | 3.2% | T2 subset-sum |
+| `ref_drift` | 146 | 3.1% | T1 normalised |
+| `date_skew` | 85 | 1.8% | T1 window |
+| `fee_residual` | 50 | 1.1% | T3 tolerance |
+| `orphan_ledger` | 32 | 0.7% | **a real exception** |
+| `orphan_gateway` | 17 | 0.4% | **a real exception** |
+| `fx` | 16 | 0.3% | T3 currency |
+
+So R2 has ~446 lines that the rules must earn, and ~49 that are genuinely
+unmatchable and belong in the exception queue. **The exception queue is the
+demo**, and 49 is an honest number rather than an inflated one — if it needs to
+be bigger for R7, generate a quarter rather than raising the orphan rate.
+
+### Two bugs the self-check caught
+
+- **`drift()` was a no-op on payu references.** Two of its four variants only
+  change a reference that contains `_` or `-`; payu's has neither, so half of
+  payu's `ref_drift` lines were labelled drifted but matched exactly. R4 would
+  have scored those as T0 misses that never happened. It now always returns
+  something different, and the test asserts zero `ref_drift` lines match exactly.
+- **`orphan_ledger` labels desynchronised every label after them.** They were
+  appended to the list running parallel to `rows` while writing no row, shifting
+  31 lines onto the wrong label. Found by asserting every line carries a label.
+
+Both were silent, and both would have surfaced in R4 as a matcher that looked
+worse than it was.
+
+**Done when:** ✅ `python test_recon_r1.py` → *ok - 4645 settlement lines across
+3 payouts, every defect class present and honest*. It asserts labels and lines
+agree in both directions, every class is present, clean lines match exactly,
+drifted ones do not, splits sum back to the paisa, orphans are orphans on both
+sides, `net = gross - fee` on every row, and a replay changes nothing.
+
+### Running it
+
+```bash
+psql -d kartly -f database/kartly/05_reconciliation.sql
+cd backend
+python -m packs.recon.generate --month 2026-07
+python -m packs.recon.ingest --reset ../payouts/*.csv
+python test_recon_r1.py
+```
+
+`payouts/` is gitignored — `generate.py` is deterministic, so the files rebuild
+byte-identically from the seed.
 
 ## Phase R2 — The deterministic matcher (2 days) ← the engineering column
 
