@@ -91,5 +91,12 @@ CREATE TABLE IF NOT EXISTS recon_labels (
 CREATE INDEX IF NOT EXISTS recon_labels_payment_idx ON recon_labels (payment_id);
 
 GRANT SELECT ON settlement_batches, settlement_lines TO data_runtime_reader;
--- recon_labels is deliberately NOT granted: the model must never be able to
--- read the answer key.
+
+-- The answer key has to be revoked, not merely left ungranted. Both
+-- `12_readonly_role.sql` and `kartly/04_grants.sql` set ALTER DEFAULT
+-- PRIVILEGES ... GRANT SELECT ON TABLES, so every table created here is handed
+-- to the reader the moment it exists. Simply not writing a GRANT does nothing.
+-- `test_recon_r1.py` connects as the reader and asserts this, because the first
+-- version of this file got it wrong and said so in a comment.
+REVOKE ALL ON recon_labels FROM data_runtime_reader;
+REVOKE ALL ON SEQUENCE recon_labels_label_id_seq FROM data_runtime_reader;

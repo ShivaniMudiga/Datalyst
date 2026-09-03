@@ -110,7 +110,29 @@ def main() -> None:
         after = one(cur, "SELECT count(*) AS value FROM settlement_lines")
     assert after == lines, f"replay changed the line count: {lines} -> {after}"
 
+    # The answer key must be unreachable from the role the model connects as.
+    # ALTER DEFAULT PRIVILEGES in 12_readonly_role.sql and kartly/04_grants.sql
+    # grants SELECT on every new table automatically, so this needs an explicit
+    # REVOKE and an explicit test - not a comment claiming it is not granted.
+    import os
+
+    import psycopg
+
+    reader = os.getenv(
+        "RECON_READER_DSN", "postgresql://data_runtime_reader:change_me@localhost:5432/kartly"
+    )
+    with psycopg.connect(reader) as connection, connection.cursor() as cur:
+        cur.execute("SELECT count(*) FROM settlement_lines")
+        assert cur.fetchone()[0] == lines, "the reader cannot see the settlement lines it needs"
+        try:
+            cur.execute("SELECT count(*) FROM recon_labels")
+        except psycopg.errors.InsufficientPrivilege:
+            connection.rollback()
+        else:
+            raise AssertionError("data_runtime_reader can read recon_labels - the model can see the answer key")
+
     print(f"ok - {lines} settlement lines across {len(batches)} payouts, every defect class present and honest")
+    print("ok - the reader role can see settlements and cannot see the answer key")
 
 
 if __name__ == "__main__":

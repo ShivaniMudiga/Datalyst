@@ -142,8 +142,48 @@ be bigger for R7, generate a quarter rather than raising the orphan rate.
 Both were silent, and both would have surfaced in R4 as a matcher that looked
 worse than it was.
 
+### Audit — R0 and R1 re-verified after the fact
+
+Both phases were checked independently rather than taken on trust.
+
+**R0 — clean.** 3 commits on `main`, working tree clean, no `.env`/key file ever
+committed and no key-shaped string in any committed blob. All four places that
+name the model now agree on `laguna-s-2.1-free`. All four dead files confirmed
+absent. **The whole existing suite passes under `backend/.venv`** — 8 of 8,
+including `test_phase2` and `test_phase3`, which make real model calls, so the
+default swap is exercised end to end and not just read.
+
+**R1 — one real hole, now closed.** `recon_labels` was readable by
+`data_runtime_reader`: both `12_readonly_role.sql` and `kartly/04_grants.sql`
+carry `ALTER DEFAULT PRIVILEGES ... GRANT SELECT ON TABLES`, so the table was
+granted to the reader the instant it was created. The file said "deliberately
+NOT granted" in a comment, and the comment was simply wrong — **the model could
+read the answer key.** Fixed with an explicit `REVOKE` on the table and its
+sequence, and the test now connects *as the reader* and asserts it: it fails
+before the revoke and passes after. Verified again on a database built only
+from the SQL file, so a fresh machine gets the revoke too.
+
+Also verified, and correct: the generator is deterministic (a full regeneration
+is byte-identical and matches the `file_hash` stored at ingest); a complete
+rebuild from a pre-R1 copy of kartly reproduces every count exactly; `INSERT` as
+the reader dies in a read-only transaction; and eleven cross-checks the self-test
+does *not* make all pass — fee residuals really differ from the ledger fee, skewed
+dates really fall outside T+2, clean lines sit exactly on it, FX lines are the
+only non-INR rows, every split has 2-3 parts, and batch `line_count` ties to the
+lines actually stored.
+
+**Known and deliberate:** 28 of the 50 `fee_residual` lines sit on a zero-fee UPI
+capture, so T3's tolerance band has to handle an *expected* fee of zero rather
+than a percentage drift. That is realistic — a PSP levying an unexpected UPI fee
+is a genuine exception — but R2 must not assume a non-zero baseline.
+
+**Carried into R3:** the five stored schema snapshots are stale. None mention
+`settlement_lines`, so the agent cannot see the settlement tables until the
+connection is re-analysed.
+
 **Done when:** ✅ `python test_recon_r1.py` → *ok - 4645 settlement lines across
-3 payouts, every defect class present and honest*. It asserts labels and lines
+3 payouts, every defect class present and honest* / *ok - the reader role can see
+settlements and cannot see the answer key*. It asserts labels and lines
 agree in both directions, every class is present, clean lines match exactly,
 drifted ones do not, splits sum back to the paisa, orphans are orphans on both
 sides, `net = gross - fee` on every row, and a replay changes nothing.
