@@ -201,38 +201,94 @@ python test_recon_r1.py
 `payouts/` is gitignored — `generate.py` is deterministic, so the files rebuild
 byte-identically from the seed.
 
-## Phase R2 — The deterministic matcher (2 days) ← the engineering column
+## Phase R2 — The deterministic matcher — **DONE**
 
-**Goal:** rules do the work. The LLM is nowhere in this phase. This is what an
-interviewer will most enjoy probing, and the reason the match rate is 98% rather
-than a model guessing.
+**Goal:** rules do the work. No model appears anywhere in this phase, and
+`test_recon_r2.py` asserts the matcher's source does not even mention the labels
+table.
 
-`packs/recon/match.py` — four tiers, run in order, each stamping `match_tier`,
-`confidence`, and `matched_by='rule'` on a `matches` table:
+- [x] `database/kartly/06_matching.sql` — `matches`, `exceptions`, and
+      `recon_core()` with expression indexes on both sides.
+- [x] `packs/recon/match.py` — the four tiers, one SQL statement each.
+- [x] `test_recon_r2.py` — eight assertions, below.
 
-| Tier | Rule | Catches |
-|---|---|---|
-| T0 | exact: reference + amount + currency | the easy majority |
-| T1 | amount + date window ±2d + normalised reference | timing skew, reference drift |
-| T2 | bounded subset-sum: N ledger lines = 1 payout | split settlements |
-| T3 | amount inside a fee/FX basis-point tolerance band | fee and FX residuals |
+### The tiers, and what each one earns
 
-- [ ] Normalisation is one function, tested in isolation (case, whitespace,
-      punctuation, known prefixes).
-- [ ] T2 is bounded — cap candidate set size and window, and say so in a
-      `ponytail:` comment naming the ceiling. An unbounded subset-sum is a hang,
-      not a feature.
-- [ ] Anything unmatched after T3 becomes a row in `exceptions` with a reason code.
-- [ ] Money is integer minor units everywhere. No floats. Currency travels with
-      every amount and mixed-currency comparison is refused, not coerced.
+| Tier | Rule | Confidence | Caught |
+|---|---|---|---|
+| T0 | reference exact · gross and fee tie to the paisa · settled by T+2 | 1.000 | 4,182 |
+| T1 | reference normalised, or late — money still ties exactly | 0.950 | 231 |
+| T2 | 2–3 lines sharing a reference sum to one capture, gross *and* fee | 0.900 | 149 |
+| T3 | fee inside a 25bp band (0.850), or settled in USD (0.800) | 0.850 / 0.800 | 66 |
+| — | no counterpart either way | — | **49 exceptions** |
 
-**Done when:** `test_matcher.py` asserts each tier catches its planted defect class
-and that no tier ever matches across currencies. Print the tier histogram — that
-histogram is a demo slide.
+**Match rate 99.63% — 4,628 of 4,645 lines — in 0.6s**, including interpreter
+start, over 60,072 candidate captures.
 
----
+**Normalisation is one rule.** Every reference here is a per-gateway prefix plus
+a 14-character hex core, and every way a payout file mangles one — case,
+separators, padding, a stripped prefix — leaves that core intact. `recon_core()`
+takes the last 14 alphanumerics, which collapses all four drift variants and
+still yields 60,072 distinct cores from 60,072 payments. No collisions.
+
+**Ordering is what makes the tiers mean anything.** T1 demands the money tie
+exactly, so a fee residual falls through it to T3 rather than being quietly
+absorbed at 0.950 confidence. T0 requires arrival by T+2, so a late payout drops
+to T1 instead of being scored as a clean tie. Each tier only sees what the tier
+above left.
+
+### The bug that mattered
+
+**Scope was defined by the wrong thing.** The first version asked which captures
+had a settlement date inside the span the file's lines cover — and accused **236
+payments of never being settled when only 32 were**, dragging in 204 captures
+from the months either side. A file's date span is not the period it reconciles.
+
+The rule now: a gateway-month is covered when the file plainly accounts for it —
+at least half that month's captures matched by these lines. Below that the file
+is only brushing the period and its silence about the rest says nothing. Exactly
+32 now, all in the month being reconciled.
+
+**Done when:** ✅ `python test_recon_r2.py` → *ok - 4628/4645 lines matched
+(99.63%), every match on the right payment* / *ok - 49 exceptions, each a genuine
+orphan, and the pass is idempotent*.
+
+The eight assertions, in order: the matcher never reads the labels · every match
+names the payment that truly issued that line · each tier caught only its own
+defect classes · nothing with a counterpart went unmatched · no payment claimed
+twice outside T2 · exact tiers tie to the paisa and split groups sum back · the
+queue holds only genuine orphans, in both directions · and no line is left
+neither matched nor queued. Re-running over its own output changes nothing.
+
+### Known — the residual is too easy for R3
+
+Precision and recall are both 1.000, which is a *warning*, not a victory. The
+tiers were designed against defects the generator was designed to plant, and
+every reference is unique and present, so nothing is genuinely ambiguous. Two
+consequences:
+
+- **R4's numbers will look fabricated.** A perfect table invites the one
+  question there is no good answer to. The threshold sweep saves it only if
+  there is something for a threshold to trade off.
+- **R3's agent has nothing to investigate.** All 49 exceptions are pure orphans;
+  the only honest proposals are `escalate` and `write_off`. Rubber-stamping is
+  not a demo of bounded agency.
+
+Both point at the same missing defect class: **`ref_missing`** — the gateway
+omits its own reference. Every tier here keys on the reference core, so no rule
+can touch those lines, and resolving one means reasoning over amount, date and
+whatever `order_reference` survived — which is exactly the agent's job. See the
+top of R3.
 
 ## Phase R3 — Proposal and gate (2 days) ← the skin-in-the-game column
+
+**Prerequisite, carried from R2: add a `ref_missing` defect class to R1's
+generator.** Roughly 1% of lines lose their `gateway_reference` entirely. No tier
+can match them, so they land in the queue as *ambiguous* rather than orphaned —
+several candidate captures with the same amount in the same window — which is
+the only shape of work that makes a proposing agent worth building. Expect the
+headline match rate to fall from 99.63% to about 98.5%; that is a more credible
+number, not a worse one.
 
 **Goal:** the agent proposes; a deterministic committer applies. This phase is the
 entire safety score, and it replaces §19's "write mode is not in the MVP".
