@@ -76,8 +76,9 @@ so it can correct itself — it is not the thing standing between the AI and you
 | Agent loop | LangGraph | Already in use; the loop shape is correct |
 | Database driver | psycopg (pooled) | Replacing the current single shared connection |
 | SQL parsing | sqlglot | Already in use for validation, pinned to the postgres dialect |
-| Agent model | Claude Sonnet 5 | Multi-step tool use, reliable corrections |
-| UI-spec model | Claude Haiku 4.5 | One small structured-output call per answer; cheap and fast |
+| Model gateway | opencode zen, OpenAI-compatible | One client, one env var to change models |
+| Agent model | `laguna-s-2.1-free` (`ZEN_MODEL`) | Free tier; handles the tool loop, and the validator catches what it gets wrong |
+| UI-spec model | the same model, no tools | One small structured-output call per answer |
 | App storage | PostgreSQL | Conversations, snapshots, connections |
 
 ## 6. What happens when someone asks a question

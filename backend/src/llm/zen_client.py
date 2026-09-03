@@ -6,7 +6,7 @@ from openai import OpenAI
 
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
-MODEL = os.getenv("ZEN_MODEL", "north-mini-code-free")
+MODEL = os.getenv("ZEN_MODEL", "laguna-s-2.1-free")
 
 client: OpenAI | None = None
 

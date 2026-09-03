@@ -60,38 +60,52 @@ every phase leaves the project demo-able.
 
 ---
 
-## Phase R0 — Credibility repairs (half a day)
+## Phase R0 — Credibility repairs — **DONE**
 
 Cheap, and each one is something a judge finds by opening a single file.
 
-- [ ] `git init`, commit the current state, commit from here on. There is no repo
-      history today and in a builder-first hackathon that history *is* the
-      execution signal.
-- [ ] `src/llm/zen_client.py:9` defaults to `north-mini-code-free` via
-      `https://opencode.ai/zen/v1`, while `project-idea.md` §5 promises Claude
-      Sonnet 5 and Haiku 4.5. Pick one and make the other match. A doc/code
-      mismatch discredits every other claim in that table.
-- [ ] Confirm no key material is committed once the repo exists (`.env` is already
-      in `.gitignore` — verify with `git status` before the first commit).
-- [ ] Delete the dead files §7 already lists: `mcp_server.py`, root `api.py` shim,
-      `config/permissions.json`, and the stale `__pycache__` trees.
+- [x] `git init`, commit the current state, commit from here on. First commit
+      `4653480`, 98 files, branch `main`. There was no repo history before this,
+      and in a builder-first hackathon that history *is* the execution signal.
+- [x] Verified no key material is committed. `.gitignore`'s `.env` pattern has no
+      leading slash, so it catches `backend/.env` and `frontend/.env` at any depth;
+      both `.env.example` files carry names with empty values.
+- [x] Dead files were already gone — `mcp_server.py`, `main.py`, the root `api.py`
+      shim and `config/permissions.json` do not exist. §7 of `project-idea.md`
+      describes work already done. Cleared 11 stale `__pycache__` trees.
+- [x] **Model mismatch resolved: keep the free gateway, fix the doc.** It was a
+      three-way disagreement — code default `north-mini-code-free`, `.env` and
+      `.env.example` `laguna-s-2.1-free`, doc "Claude Sonnet 5 + Haiku 4.5". All
+      three now say `laguna-s-2.1-free` on opencode zen, and §5 names the gateway
+      as a row of its own so the swap is one env var if the tier ever matters.
 
-**Done when:** `git log --oneline` has commits and `grep -rn "north-mini" backend/`
-agrees with `project-idea.md` §5.
-
----
+**Decision recorded:** the model is free-tier and the doc says so. The defensible
+line is that the *architecture* carries the reliability — the four-stage validator,
+the correction loop and the step budget are what make a weaker model safe, and R2
+puts the matching in SQL where no model can get it wrong. That is a stronger answer
+to a judge than a better model would have been. Revisit only if R4's eval shows the
+model, not the rules, is the accuracy ceiling.
 
 ## Phase R1 — The two sources (1 day)
 
 **Goal:** a settlement file is just another `DataSource`. This is the payoff for
 having written `src/datasource/base.py` as a protocol.
 
-- [ ] `database/16_ledger.sql` — internal ledger: `ledger_entries` (id, entry_date,
-      amount_minor, currency, reference, counterparty, status), plus enough volume
-      to be non-trivial (~50k rows across one month).
-- [ ] `database/17_settlements.sql` — PSP payout shape: `settlement_lines`
-      (payout_id, settled_at, gross_minor, fee_minor, net_minor, currency,
-      psp_reference, order_reference).
+**Head start — `database/kartly/`.** A marketplace with a full payments stack is
+already seeded there: `payments` (gateway, `gateway_fee`, `captured_at`,
+`attempt_no` for retries, `payment_status`), `refunds` with `settled_at`, plus
+`orders`, `returns` and `shipments`. **That is the internal ledger side already
+built.** Kartly becomes the ledger; R1 shrinks to generating the gateway's payout
+file against it and injecting the defects. Roughly half a day, not a full one.
+It is also already granted to `data_runtime_reader` (`kartly/04_grants.sql`).
+
+- [ ] Ledger side: use `kartly.payments` as-is. Add only what reconciliation needs
+      and kartly lacks — a stable `gateway_reference` per captured payment.
+- [ ] `database/kartly/05_settlements.sql` — the gateway's payout file:
+      `settlement_lines` (payout_id, settled_at, gross_minor, fee_minor, net_minor,
+      currency, gateway_reference, order_reference), generated from captured
+      payments so the *correct* answer is known by construction. That construction
+      is what makes R4's labelling tractable.
 - [ ] Seed them *with deliberate defects*, because clean data proves nothing:
       split settlements (N ledger lines → 1 payout), FX pairs, fee-only residuals,
       references with prefix/case/punctuation drift, a ±2-day timing skew, a handful
