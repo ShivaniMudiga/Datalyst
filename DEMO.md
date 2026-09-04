@@ -201,4 +201,8 @@ model's role to prove it.
   the control working; restart terminal 1 with it.
 - **The matcher prints zeros.** You forgot `demo prep`, so there was nothing new
   to match. `demo status` catches this before you stand up.
+- **Self-checks fail after `demo prep`.** They should: `prep` withdraws a batch
+  while its labels stay, which is exactly the desynchronisation
+  `test_recon_r1.py` exists to catch. Ingest the held-back file before running
+  the suite, or run the suite first.
 - **Anything else.** `demo status`, fix what it names, carry on.
