@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+openai
+python-dotenv
+psycopg[binary]
+psycopg-pool
+sqlglot
+langgraph
+langgraph-checkpoint-postgres
+typing-extensions
+pymongo
+cryptography
