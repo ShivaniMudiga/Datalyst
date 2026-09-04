@@ -4,7 +4,7 @@ import { Home } from './pages/Home'
 import { Landing } from './pages/Landing'
 import { Schema } from './pages/Schema'
 import { Setup } from './pages/Setup'
-import { packPages } from './packs'
+import { packLanding, packPages } from './packs'
 import { Unauthorized, api, token } from './services/api'
 import type { AuthUser } from './types/auth'
 import type { Connection, Snapshot } from './types/setup'
@@ -138,7 +138,11 @@ export default function App() {
   }
 
   if (screen === 'landing') {
-    return <Landing theme={theme} onToggleTheme={toggleTheme} onTry={enterApp} />
+    // A pack may bring its own front door, because the generic one cannot name
+    // what this installation does without breaking Rule 1. With no pack
+    // installed, the generic page is what a visitor sees.
+    const Front = packLanding ?? Landing
+    return <Front theme={theme} onToggleTheme={toggleTheme} onTry={enterApp} />
   }
 
   if (screen === 'loading') {
