@@ -29,6 +29,11 @@ from packs.recon.db import cursor
 
 # The window a payout is expected to arrive in. T0 means "on or before"; a line
 # later than this is late, which is T1's business, not T0's.
+#
+# The window is two-sided. Only bounding the late end let a line dated *before*
+# its capture satisfy every tier - and money cannot be settled before it is
+# taken. A one-sided window is the kind of hole that only shows up when a
+# gateway's clock is wrong or a file is mislabelled.
 ON_TIME_DAYS = 2
 LATE_DAYS = 10
 
@@ -61,7 +66,7 @@ JOIN payments p ON p.gateway_reference = l.gateway_reference
 WHERE l.currency = 'INR'
   AND l.gross_minor = round(p.amount * 100)
   AND l.fee_minor   = round(p.gateway_fee * 100)
-  AND l.settled_at <= p.captured_at + interval '{ON_TIME_DAYS} days'
+  AND l.settled_at BETWEEN p.captured_at AND p.captured_at + interval '{ON_TIME_DAYS} days'
   {UNCLAIMED}
 """
 
@@ -77,7 +82,7 @@ WHERE l.gateway_reference IS NOT NULL
   AND l.currency = 'INR'
   AND l.gross_minor = round(p.amount * 100)
   AND l.fee_minor   = round(p.gateway_fee * 100)
-  AND l.settled_at <= p.captured_at + interval '{LATE_DAYS} days'
+  AND l.settled_at BETWEEN p.captured_at AND p.captured_at + interval '{LATE_DAYS} days'
   {UNCLAIMED}
 """
 
@@ -99,7 +104,7 @@ WHERE l.gateway_reference IS NULL
   AND p.gateway_reference IS NOT NULL
   AND l.gross_minor = round(p.amount * 100)
   AND l.fee_minor   = round(p.gateway_fee * 100)
-  AND l.settled_at <= p.captured_at + interval '{LATE_DAYS} days'
+  AND l.settled_at BETWEEN p.captured_at AND p.captured_at + interval '{LATE_DAYS} days'
   {UNCLAIMED}
 """
 
@@ -117,6 +122,7 @@ WITH grouped AS (
          count(*)            AS parts,
          sum(l.gross_minor)  AS gross_minor,
          sum(l.fee_minor)    AS fee_minor,
+         min(l.settled_at)   AS first_settled_at,
          max(l.settled_at)   AS last_settled_at,
          array_agg(l.line_id) AS line_ids
   FROM settlement_lines l
@@ -133,6 +139,7 @@ JOIN payments p ON recon_core(p.gateway_reference) = g.core
 CROSS JOIN LATERAL unnest(g.line_ids) AS part(line_id)
 WHERE g.gross_minor = round(p.amount * 100)
   AND g.fee_minor   = round(p.gateway_fee * 100)
+  AND g.first_settled_at >= p.captured_at
   AND g.last_settled_at <= p.captured_at + interval '{LATE_DAYS} days'
   AND NOT EXISTS (SELECT 1 FROM matches m WHERE m.payment_id = p.payment_id)
 """
@@ -152,7 +159,7 @@ WHERE l.gateway_reference IS NOT NULL
   AND l.gross_minor = round(p.amount * 100)
   AND abs(l.fee_minor - round(p.gateway_fee * 100))
       <= greatest({FEE_TOLERANCE_FLOOR_MINOR}, round(l.gross_minor * {FEE_TOLERANCE_BPS} / 10000.0))
-  AND l.settled_at <= p.captured_at + interval '{LATE_DAYS} days'
+  AND l.settled_at BETWEEN p.captured_at AND p.captured_at + interval '{LATE_DAYS} days'
   {UNCLAIMED}
 """
 
@@ -169,7 +176,7 @@ WHERE l.gateway_reference IS NOT NULL
   AND l.currency <> 'INR'
   AND abs(l.gross_minor - round(round(p.amount * 100) * {USD_PER_INR}))
       <= greatest(2, round(l.gross_minor * {FX_TOLERANCE_PCT}))
-  AND l.settled_at <= p.captured_at + interval '{LATE_DAYS} days'
+  AND l.settled_at BETWEEN p.captured_at AND p.captured_at + interval '{LATE_DAYS} days'
   {UNCLAIMED}
 """
 

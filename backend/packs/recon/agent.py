@@ -197,6 +197,11 @@ def main() -> None:
         print(f"  #{exception['exception_id']:<5} {exception['narration'][:44]:<46} "
               f"{result.get('status'):<10} {result.get('resolution_id', '')}")
 
+    # The read-only pool is a background thread pool; without this every run
+    # ends in four "couldn't stop thread" warnings that look like a fault.
+    from src.db.connection import close_all
+    close_all()
+
 
 if __name__ == "__main__":
     main()
