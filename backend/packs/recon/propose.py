@@ -53,6 +53,7 @@ def propose_resolution(
     reason: str,
     confidence: float,
     target_ids: list[int] | None = None,
+    _cost: dict | None = None,
 ) -> dict:
     """Record one proposed resolution for one exception. Applies nothing."""
     targets = [int(target) for target in (target_ids or [])]
@@ -100,11 +101,13 @@ def propose_resolution(
         cur.execute(
             """
             INSERT INTO resolutions (exception_id, kind, target_ids, confidence, reason,
-                                     evidence_sql, evidence_hash)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                     evidence_sql, evidence_hash, steps, corrections, latency_ms)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING resolution_id
             """,
-            (exception_id, kind, targets, confidence, reason.strip(), statement, digest),
+            (exception_id, kind, targets, confidence, reason.strip(), statement, digest,
+             (_cost or {}).get("steps"), (_cost or {}).get("corrections"),
+             (_cost or {}).get("latency_ms")),
         )
         resolution_id = cur.fetchone()["resolution_id"]
         cur.execute(

@@ -1,4 +1,6 @@
 import os
+import random
+import time
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -106,18 +108,45 @@ def _client() -> OpenAI:
     return client
 
 
+RETRIES = int(os.getenv("LLM_RETRIES", "4"))
+
+
+def _with_retry(call):
+    """Bounded retry on the failures that are the gateway's, not ours.
+
+    A single 503 from the provider used to end a whole batch run - and in the
+    app it would end a user's question just as finally. Retried with backoff and
+    jitter, because every caller reaches the model through here; a 4xx that is
+    genuinely our fault is raised immediately rather than retried into a wall.
+    """
+    from openai import APIConnectionError, APIStatusError, APITimeoutError
+
+    for attempt in range(RETRIES):
+        try:
+            return call()
+        except (APIConnectionError, APITimeoutError) as error:
+            last = error
+        except APIStatusError as error:
+            if error.status_code < 500 and error.status_code != 429:
+                raise
+            last = error
+        if attempt < RETRIES - 1:
+            time.sleep(2**attempt + random.random())
+    raise last
+
+
 def chat(messages, tools=TOOLS):
     """One turn. ``tools=None`` forces a prose answer - that is how the step
     budget stops an investigation without throwing away what it found."""
-    response = _client().chat.completions.create(
+    response = _with_retry(lambda: _client().chat.completions.create(
         model=MODEL, messages=messages, **({"tools": tools} if tools else {})
-    )
+    ))
     return response.choices[0].message
 
 
 def complete(prompt: str) -> str:
     """One plain completion, no tools. Used for the small structured calls."""
-    response = _client().chat.completions.create(
+    response = _with_retry(lambda: _client().chat.completions.create(
         model=MODEL, messages=[{"role": "user", "content": prompt}]
-    )
+    ))
     return response.choices[0].message.content or ""

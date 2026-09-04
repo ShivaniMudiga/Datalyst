@@ -41,8 +41,22 @@ CREATE TABLE IF NOT EXISTS resolutions (
   idempotency_key text UNIQUE,
   applied_effect  jsonb,
   created_at      timestamptz NOT NULL DEFAULT now(),
-  updated_at      timestamptz NOT NULL DEFAULT now()
+  updated_at      timestamptz NOT NULL DEFAULT now(),
+
+  -- What the proposal cost to reach. Recorded because R4 reports it: a system
+  -- that is right but takes forty steps is a different system from one that is
+  -- right in three, and `corrections` is how often the validator caught the
+  -- model mid-investigation.
+  steps           int,
+  corrections     int,
+  latency_ms      int
 );
+
+-- Added after the table existed, so they need their own statements: the
+-- CREATE TABLE above is skipped entirely once the table is there.
+ALTER TABLE resolutions ADD COLUMN IF NOT EXISTS steps       int;
+ALTER TABLE resolutions ADD COLUMN IF NOT EXISTS corrections int;
+ALTER TABLE resolutions ADD COLUMN IF NOT EXISTS latency_ms  int;
 
 CREATE INDEX IF NOT EXISTS resolutions_exception_idx ON resolutions (exception_id);
 CREATE INDEX IF NOT EXISTS resolutions_state_idx     ON resolutions (state);

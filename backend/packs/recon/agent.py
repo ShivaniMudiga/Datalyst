@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import time
 
 from packs.recon.db import cursor
 from packs.recon.propose import TOOL_DESCRIPTION, TOOL_PARAMETERS, propose_resolution
@@ -129,7 +130,11 @@ def work(exception: dict, source, validator) -> dict:
         })},
     ]
 
+    cost = {"steps": 0, "corrections": 0, "latency_ms": 0}
+    started = time.monotonic()
+
     for _ in range(STEP_BUDGET):
+        cost["steps"] += 1
         message = chat(messages, tools=TOOLS)
         calls = getattr(message, "tool_calls", None) or []
         messages.append({
@@ -150,11 +155,15 @@ def work(exception: dict, source, validator) -> dict:
                 if name == "query":
                     sql = arguments.get("sql", "")
                     validation = validator.validate(sql)
-                    result = (source.execute(sql) if validation.valid else
-                              {"status": "validation_failed", "error_type": validation.error_type,
-                               "message": validation.message})
+                    if validation.valid:
+                        result = source.execute(sql)
+                    else:
+                        cost["corrections"] += 1
+                        result = {"status": "validation_failed", "error_type": validation.error_type,
+                                  "message": validation.message}
                 elif name == "propose_resolution":
-                    result = propose_resolution(**arguments)
+                    cost["latency_ms"] = int((time.monotonic() - started) * 1000)
+                    result = propose_resolution(**arguments, _cost=cost)
                 else:
                     result = {"status": "tool_error", "message": f"no tool named {name}"}
             except Exception as error:
@@ -171,15 +180,20 @@ def work(exception: dict, source, validator) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--limit", type=int, default=5)
+    parser.add_argument("--all", action="store_true", help="every open nameless exception")
     args = parser.parse_args()
 
     with cursor() as cur:
-        cur.execute(OPEN_EXCEPTIONS, (args.limit,))
+        cur.execute(OPEN_EXCEPTIONS, (10000 if args.all else args.limit,))
         queue = cur.fetchall()
 
     source, validator = reader()
     for exception in queue:
-        result = work(exception, source, validator)
+        # A queue of 37 must not be ended by whatever went wrong on number 3.
+        try:
+            result = work(exception, source, validator)
+        except Exception as error:
+            result = {"status": "failed", "message": str(error)[:80]}
         print(f"  #{exception['exception_id']:<5} {exception['narration'][:44]:<46} "
               f"{result.get('status'):<10} {result.get('resolution_id', '')}")
 
