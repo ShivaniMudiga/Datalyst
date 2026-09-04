@@ -76,7 +76,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 export const recon = {
   summary: () => call<Summary>('/summary'),
   queue: (status = 'open', reason = 'all') =>
-    call<QueueRow[]>(`/exceptions?status=${status}&reason=${reason}`),
+    call<QueueRow[]>(`/exceptions?${new URLSearchParams({ status, reason })}`),
   audit: () => call<AuditRow[]>('/audit'),
   decide: (id: number, accept: boolean) =>
     call<{ status: string }>(`/resolutions/${id}/decide`, {

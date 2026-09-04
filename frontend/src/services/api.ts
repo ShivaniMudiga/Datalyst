@@ -7,7 +7,14 @@ const TOKEN_KEY = 'data-runtime-token'
 
 /** The session token. In localStorage so a reload stays signed in; sent as a
  *  bearer header rather than a cookie, so nothing rides along on cross-site
- *  requests and there is no CSRF surface to defend. */
+ *  requests and there is no CSRF surface to defend.
+ *
+ *  The trade this makes: a token in localStorage is readable by any script that
+ *  gets injected, where an HttpOnly cookie would not be. That is the right way
+ *  round here - the app is a local tool with no third-party scripts and no CSP
+ *  to lean on, so CSRF is the live risk and XSS is not. Deploying it to
+ *  untrusted browsers changes that answer, and the fix then is HttpOnly cookies
+ *  with a short-lived access token and refresh rotation, not a tweak here. */
 export const token = {
   get: () => window.localStorage.getItem(TOKEN_KEY),
   set: (value: string) => window.localStorage.setItem(TOKEN_KEY, value),
