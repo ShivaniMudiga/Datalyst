@@ -119,7 +119,10 @@ def test_no_domain_words_in_the_product():
     """
     banned = re.compile(
         r"\b(student|students|merchant|merchants|patient|patients|hospital|"
-        r"college|university|invoice|invoices|shipment|shipments)\b",
+        r"college|university|invoice|invoices|shipment|shipments|"
+        # Rule 4 cuts both ways: a pack may know a domain, so the runtime must
+        # not pick one up from the pack living beside it.
+        r"settlement|settlements|payout|payouts|reconcil\w*|gateway|ledger)\b",
         re.IGNORECASE,
     )
     roots = [Path("src"), Path("../frontend/src")]
@@ -129,8 +132,20 @@ def test_no_domain_words_in_the_product():
         for path in root.rglob("*"):
             if path.suffix not in {".py", ".ts", ".tsx", ".css"}:
                 continue
+            # `packs/` is where a domain is allowed to be named, and the registry
+            # is the one file the runtime imports from it.
+            if "packs" in path.parts:
+                continue
+            # A region may opt out, and must say why in the marker itself. The
+            # one that does is a menu of four industries shown to prove no
+            # single one is baked in - the exception that demonstrates the rule.
+            exempt = False
             for number, line in enumerate(path.read_text().splitlines(), start=1):
-                if banned.search(line):
+                if "rule1-exempt:start" in line:
+                    exempt = True
+                elif "rule1-exempt:end" in line:
+                    exempt = False
+                elif not exempt and banned.search(line):
                     offenders.append(f"{path}:{number}: {line.strip()}")
 
     assert not offenders, "domain words in the product:\n" + "\n".join(offenders)

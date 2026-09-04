@@ -85,6 +85,30 @@ app.add_middleware(
 _users = UserStore()
 
 
+def _mount_packs() -> None:
+    """Give every pack that offers an HTTP surface one, without knowing any of them.
+
+    Rule 4: a pack may know a domain, the runtime may not. The runtime learns
+    here that packs exist and that some expose a router - never what any of them
+    is for. A pack without an `api` module is simply not mounted.
+    """
+    import importlib
+    import pkgutil
+
+    try:
+        import packs
+    except ModuleNotFoundError:
+        return
+
+    for found in pkgutil.iter_modules(packs.__path__):
+        try:
+            module = importlib.import_module(f"packs.{found.name}.api")
+        except ModuleNotFoundError:
+            continue
+        app.include_router(module.build(signed_in), prefix=f"/packs/{found.name}")
+        logger.info("mounted pack %s", found.name)
+
+
 @app.middleware("http")
 async def attach_user(request: Request, call_next):
     """Resolve the bearer token once, for the whole request.
@@ -420,3 +444,7 @@ def analyse_schema(user: User = Depends(signed_in)) -> StreamingResponse:
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# Last, because a pack's router is handed `signed_in`, which is defined above.
+_mount_packs()

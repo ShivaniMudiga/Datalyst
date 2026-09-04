@@ -112,9 +112,9 @@ RETRIES = int(os.getenv("LLM_RETRIES", "4"))
 
 
 def _with_retry(call):
-    """Bounded retry on the failures that are the gateway's, not ours.
+    """Bounded retry on the failures that are the provider's, not ours.
 
-    A single 503 from the provider used to end a whole batch run - and in the
+    A single 503 upstream used to end a whole batch run - and in the
     app it would end a user's question just as finally. Retried with backoff and
     jitter, because every caller reaches the model through here; a 4xx that is
     genuinely our fault is raised immediately rather than retried into a wall.

@@ -4,6 +4,7 @@ import { Home } from './pages/Home'
 import { Landing } from './pages/Landing'
 import { Schema } from './pages/Schema'
 import { Setup } from './pages/Setup'
+import { packPages } from './packs'
 import { Unauthorized, api, token } from './services/api'
 import type { AuthUser } from './types/auth'
 import type { Connection, Snapshot } from './types/setup'
@@ -123,6 +124,17 @@ export default function App() {
     setConnection(next)
     setConnections(await api.getConnections().catch(() => []))
     setSnapshot(await api.getSchema().catch(() => null))
+  }
+
+  // A pack's own screen, reached at #pack/<name>. The runtime resolves the name
+  // through the registry and renders whatever it finds; it does not know, and
+  // must not know, what any pack is for.
+  const packName = window.location.hash.startsWith('#pack/') ? window.location.hash.slice(6) : null
+  const PackPage = packName ? packPages[packName] : undefined
+  // Gated on the session token rather than on `user`, which is only resolved
+  // once the session has been resumed - a moment later than the first render.
+  if (PackPage && token.get()) {
+    return <PackPage onBack={() => { window.location.hash = ''; setScreen('conversation') }} />
   }
 
   if (screen === 'landing') {

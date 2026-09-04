@@ -27,6 +27,10 @@ const STARTING_POINTS = [
   { title: 'Start from scratch', hint: 'Write your own', text: '' },
 ]
 
+/* rule1-exempt:start - These are a menu spanning four unrelated industries,
+   shown so someone can see the tool is not built for any one of them. They are
+   the deliberate exception to Rule 1: the point of the strings *is* that no
+   single domain owns them. Nothing outside this block may name an industry. */
 const EXAMPLES = [
   {
     tag: 'PAYMENTS',
@@ -45,6 +49,7 @@ const EXAMPLES = [
     text: 'You are a fleet analyst. Track delivery times by region, identify routes with recurring delays, and flag carriers below SLA.',
   },
 ]
+/* rule1-exempt:end */
 
 const BLANK: ConnectionInput = {
   host: 'localhost',
