@@ -323,47 +323,99 @@ consequences:
 Both were fixed by the section above. The headline match rate fell from 99.63%
 to 98.84% — a more credible number, not a worse one.
 
-## Phase R3 — Proposal and gate (2 days) ← the skin-in-the-game column
+## Phase R3 — Proposal and gate — **DONE**
 
-**The residual is ready.** 37 nameless lines carrying only free text, 18 of
-which hide an order id and 19 of which are false leads. The agent reads the
-narration; the committer verifies what it read. See R2's *Making the residual
-real*.
+**Goal:** the agent proposes; a deterministic committer applies. This is the
+whole safety score, and it replaces §19's "write mode is not in the MVP".
 
-**Goal:** the agent proposes; a deterministic committer applies. This phase is the
-entire safety score, and it replaces §19's "write mode is not in the MVP".
+- [x] `database/kartly/07_resolutions.sql` — `resolutions`, `audit_log`, the
+      state machine as a trigger, the append-only triggers, grants.
+- [x] `packs/recon/propose.py` — the one action the agent has.
+- [x] `packs/recon/commit.py` — the only code that changes what is settled.
+- [x] `packs/recon/agent.py` — the agent working the nameless queue.
+- [x] `test_recon_r3.py` — eleven attempts to get a change in without a person.
 
-- [ ] New tool, alongside `get_schema` / `run_query` / `finish` in
-      `src/agent/tools.py`: **`propose_resolution(exception_id, kind, target_ids,
-      confidence, reason)`**. It writes a proposal row. It cannot write anywhere
-      else. `kind` is a closed enum — `link`, `split_link`, `fee_adjustment`,
-      `write_off`, `escalate` — so the model picks from a fixed set rather than
-      inventing an action.
-- [ ] Every proposal stores the SQL evidence it rests on, and a hash of the result
-      set it saw. A proposal whose evidence no longer reproduces is refused at
-      apply time.
-- [ ] State machine, enforced in the database (CHECK constraint or trigger, not
-      Python): `proposed → approved | rejected → applied → reversed`. Illegal
-      transitions raise.
-- [ ] `packs/recon/commit.py` — the only code that mutates the ledger. It validates
-      the proposal against live data, requires state `approved`, and carries an
-      **idempotency key** (`file_hash` + `exception_id` + `kind`). Replaying the
-      same payout file is a no-op that says so.
-- [ ] Append-only `audit_log`: actor, action, timestamp, before/after, evidence
-      hash, proposal id. No UPDATE or DELETE grant on it, for anyone.
-- [ ] `reverse(resolution_id)` — one call, every applied resolution undoable, and
-      the reversal is itself audited.
-- [ ] The `permission` field on a connection finally branches on something: write
-      operations require a connection whose permission is `write`, and the
-      reconciliation ledger is a *different* connection from the read-only one the
-      analyst asks questions through.
+### The shape of it
 
-**Done when:** `test_gate.py` asserts — a proposal cannot apply itself; an
-unapproved proposal is refused; the same file applied twice changes one row, not
-two; a reversal restores the prior value; and every one of those leaves an audit
-row. Also assert the model **cannot** reach `commit.py`: it is not in `FUNCTION_MAP`.
+**The agent's whole reach is two tools:** a read-only `query` and
+`propose_resolution`. A proposal records what it thinks, what it read, and how
+sure it is — and stops. `test_recon_r3.py` asserts the agent module does not so
+much as *name* the committer, and that the tool list it is handed is exactly
+those two.
 
----
+**The evidence is not taken from the model.** `propose.py` recomputes it from
+the database in a canonical query stored beside the proposal, and hashes the
+result. At apply time it is recomputed and re-hashed: if the ledger moved
+underneath, the apply is refused rather than applied to a world that no longer
+exists.
+
+**The state machine lives in the database**, so code that forgets the rule still
+obeys it. `proposed → approved | rejected → applied → reversed`, and nothing
+else; an approval without a decider raises; an apply without an idempotency key
+raises.
+
+**Applying needs `RECON_WRITE_DSN` set explicitly.** A process meant only to read
+and propose never holds credentials that can apply. Locally that is the same
+owner role; in anything real it is a role with `INSERT` on `matches` and nothing
+else.
+
+**The audit log cannot be edited, deleted or truncated** — by anyone, the table
+owner included, because it is enforced by triggers rather than by a `REVOKE`.
+
+### The agent, on real exceptions
+
+Five nameless lines worked end to end against the live model, **five correct
+links.** Its own reasoning, verbatim from `resolutions.reason`:
+
+> *"Narration contains order id 68584; verified a captured razorpay payment for
+> the exact amount (1583360 paise), before settlement date, not already
+> matched."*
+
+> *"Narration contained no order ID or verifiable reference (only a batch
+> number), but the settlement amount of 374112 paise exactly matches a single
+> captured payment…"*
+
+The second is the interesting one: it says plainly that the narration named
+nothing, and rests the proposal on the amount instead — at lower confidence.
+That is the sentence a reviewer needs in order to disagree with it.
+
+An earlier run, before the query tool was wired correctly, produced three
+`escalate` proposals reading *"could not verify… due to access restrictions"*.
+The tool was broken and the agent refused to guess. That is the behaviour the
+architecture is for, observed by accident.
+
+### Three bugs, all found by trying to break it
+
+- **The append-only trigger did not cover `TRUNCATE`.** A row-level trigger
+  never sees it, so the entire log could have been erased by a statement that
+  fired nothing. A second statement-level trigger now catches it, and the test
+  asserts all three of update, delete and truncate.
+- **`match --reset` would have discarded human decisions.** R3's foreign key
+  from `resolutions` to `exceptions` broke the truncate outright; cascading
+  would have silently deleted approved proposals. It now refuses while any
+  resolution is live and says which.
+- **The pack could not validate SQL.** `PostgresDataSource.validate` loads the
+  *signed-in user's* snapshot, and a pack script has no session. The pack builds
+  the same `SQLValidator` from a fresh introspection instead — same four stages,
+  different source of schema.
+
+### Left out, deliberately
+
+- **Three kinds, not five.** `link`, `write_off` and `escalate` are what this
+  residual produces. `split_link` and `fee_adjustment` were in the plan; T2 and
+  T3 already resolve those deterministically, so a proposal kind for them would
+  be an enum value nothing can reach.
+- **The `permission` field on a connection is still display-only.** Wiring the
+  app's per-connection permission into a pack's committer would be decoration:
+  the real controls here are the state machine, the separate write DSN, and the
+  fact that the model's only database access is the runtime's read-only role.
+  Noted rather than faked.
+
+**Done when:** ✅ `python test_recon_r3.py` → *ok - proposed, refused, approved,
+refused again on stale evidence, applied once, applied twice with no second
+effect, reversed* / *ok - the agent holds no route to the committer, and the log
+cannot be edited, deleted or truncated*. The whole suite — 10 of 10 — passes, and
+a database rebuilt from the three SQL files alone reproduces all of it.
 
 ## Phase R4 — The numbers (1.5 days) ← the proof column
 

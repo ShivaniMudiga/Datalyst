@@ -228,7 +228,20 @@ def run(reset: bool = False) -> dict:
     counts: dict[str, int] = {}
     with cursor(commit=True) as cur:
         if reset:
-            cur.execute("TRUNCATE matches, exceptions")
+            # Re-matching throws away every exception, and a person's decisions
+            # hang off those. Refuse rather than cascade: a rebuilt queue is a
+            # development convenience, and it is not worth an approval quietly
+            # disappearing. The audit log keeps its rows either way - it has no
+            # foreign key and cannot be deleted from.
+            cur.execute("""SELECT count(*) AS n FROM resolutions
+                           WHERE state IN ('proposed', 'approved', 'applied')""")
+            live = cur.fetchone()["n"]
+            if live:
+                raise SystemExit(
+                    f"{live} live resolution(s) hang off the current exceptions. "
+                    "Reset would discard them; reject or reverse them first."
+                )
+            cur.execute("TRUNCATE matches, exceptions, resolutions CASCADE")
         for name, statement in TIERS:
             cur.execute(statement)
             counts[name] = cur.rowcount
