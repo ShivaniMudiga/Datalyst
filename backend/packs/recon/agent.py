@@ -198,9 +198,12 @@ def main() -> None:
         try:
             result = work(exception, source, validator)
         except Exception as error:
-            result = {"status": "failed", "message": str(error)[:80]}
+            result = {"status": "failed", "message": f"{type(error).__name__}: {str(error)[:100]}"}
+        # The message matters most when the status is `failed`, which is exactly
+        # when the first version of this line dropped it.
         print(f"  #{exception['exception_id']:<5} {exception['narration'][:44]:<46} "
-              f"{result.get('status'):<10} {result.get('resolution_id', '')}")
+              f"{result.get('status'):<12} "
+              f"{result.get('resolution_id') or result.get('message', '')}")
 
     # The read-only pool is a background thread pool; without this every run
     # ends in four "couldn't stop thread" warnings that look like a fault.

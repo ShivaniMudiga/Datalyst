@@ -20,7 +20,10 @@ rather than on stage.
 from __future__ import annotations
 
 import json
+import os
 import sys
+import urllib.error
+import urllib.request
 
 import psycopg
 
@@ -30,6 +33,40 @@ from packs.recon.db import DSN, cursor
 # The file the audience watches arrive. Ingesting it on stage is the only way
 # the tier histogram has anything to print.
 HELD_BACK = "razorpay-2026-07.csv"
+
+# Checked because port 8000 is popular. A container bound to *:8000 on IPv6 and
+# our own server on 127.0.0.1:8000 both start without complaint, and the browser
+# resolves localhost to ::1 first - so the app talks to the wrong server and the
+# page is simply blank. This asks the API whether it is ours.
+API = os.getenv("RECON_API_URL", "http://localhost:8020")
+
+
+def model_answers() -> tuple[bool, str]:
+    """One tiny call, because a free tier that has run out fails only on stage.
+
+    A long agent pass can exhaust the quota, and every symptom of that appears
+    somewhere else: the batch prints `failed`, the app returns a generic error,
+    and the live moment simply does not happen. Better to find it here for the
+    price of one token.
+    """
+    try:
+        from src.llm.zen_client import complete
+
+        complete("Reply with one word: ready")
+        return True, "answering"
+    except Exception as error:
+        name = type(error).__name__
+        if "RateLimit" in name or "429" in str(error):
+            return False, "QUOTA EXHAUSTED - wait for the reset"
+        return False, f"{name}"
+
+
+def api_is_ours() -> bool:
+    try:
+        with urllib.request.urlopen(f"{API}/openapi.json", timeout=3) as response:
+            return "/packs/recon/summary" in json.load(response).get("paths", {})
+    except (urllib.error.URLError, OSError, ValueError):
+        return False
 
 CHECKS = """
 SELECT (SELECT count(*) FROM settlement_batches)                            AS batches,
@@ -95,6 +132,9 @@ def status() -> int:
     except Exception:
         portable = False
 
+    ours = api_is_ours()
+    model_ok, model_note = model_answers()
+
     rows = [
         ("payout files ingested", state["batches"], state["batches"] >= 3,
          "python -m packs.recon.ingest --reset ../payouts/*.csv"),
@@ -102,14 +142,20 @@ def status() -> int:
         ("matched by rule", state["matches"], state["matches"] > 0,
          "python -m packs.recon.match --reset"),
         ("exceptions in the queue", state["open_exceptions"], state["open_exceptions"] > 0, ""),
-        ("proposals awaiting a person", state["awaiting"], state["awaiting"] >= 3,
-         "python -m packs.recon.agent --all"),
+        # Two is the floor, not a margin: the script rejects one and approves
+        # another. Anything above that is spare.
+        ("proposals awaiting a person", state["awaiting"], state["awaiting"] >= 2,
+         "python -m packs.recon.agent --limit 4"),
         ("left unworked, for the live moment", state["unworked"], state["unworked"] >= 1,
          "leave at least one; --all works them all"),
         (f"{HELD_BACK} held back for the stage", "yes" if not state["held_back"] else "ALREADY INGESTED",
          not state["held_back"], "python -m packs.recon.demo prep"),
         ("the other database, for the last 15 seconds", "transit" if portable else "missing", portable,
          "psql -d postgres -f database/14_domain_leakage_check.sql"),
+        (f"the API at {API} is ours", "yes" if ours else "NOT RESPONDING OR NOT OURS", ours,
+         f"start it on that port, and check nothing else holds it: lsof -nP -iTCP:{API.rsplit(':', 1)[-1]}"),
+        ("the model provider", model_note, model_ok,
+         "the live moment and the closing question both need it; the rest of the demo does not"),
     ]
 
     failed = 0

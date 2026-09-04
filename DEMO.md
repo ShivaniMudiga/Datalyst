@@ -38,15 +38,21 @@ column of zeros. So one payout file is withdrawn, and you ingest it on stage.
 Two terminals and a browser:
 
 ```bash
-# terminal 1 — the API, with permission to act
+# terminal 1 — the API, with permission to act.
+# Port 8020, not 8000: 8000 is popular, and a container bound to *:8000 on IPv6
+# alongside our own on 127.0.0.1:8000 both start happily while the browser
+# resolves localhost to ::1 and talks to the wrong one. The page just goes blank.
 RECON_WRITE_DSN=postgresql://apple@localhost:5432/kartly \
-  .venv/bin/python -m uvicorn api:app --port 8000
+  .venv/bin/python -m uvicorn api:app --port 8020
 
-# terminal 2 — the app
-cd frontend && npx vite --port 5173
+# terminal 2 — the app, pointed at that API
+cd frontend && VITE_API_URL=http://localhost:8020 npx vite --port 5173 --strictPort
 
-# terminal 3 — kept clear, for the two commands you run on stage
+# terminal 3 — kept clear, for the three commands you run on stage
 ```
+
+`demo status` asks the API whether it is *ours* rather than whether something
+answers, which is the only version of that check worth having.
 
 Browser: sign in, then `http://localhost:5173/#pack/recon`. Leave it on the
 queue, scrolled to the top.
@@ -180,9 +186,16 @@ model's role to prove it.
 
 ## If something breaks
 
+- **The model provider is out of quota.** `demo status` checks this with one
+  token before you stand up, because the symptoms are all indirect: the batch
+  prints `failed`, the app shows a generic error, and the live moment simply does
+  not happen. A long agent pass will exhaust a free tier. **Only two beats need
+  the model — 0:40 and 1:30.** Everything else is rules and the gate. If it is
+  out: skip 0:40, open a proposal that already exists, and for 1:30 show the
+  runtime *reading* the transit schema instead of answering a question about it.
 - **The model call hangs or 503s.** It retries four times with backoff. If it
-  still fails, say so and open a proposal that already exists — there are dozens.
-  The failure is not fatal to the story: the agent refusing to guess *is* the story.
+  still fails, say so and open a proposal that already exists. The failure is not
+  fatal to the story: the agent refusing to guess *is* the story.
 - **The queue looks empty.** The filter chips are sticky. Click *Everything*.
 - **Apply returns 403.** `RECON_WRITE_DSN` is not set on the API process. That is
   the control working; restart terminal 1 with it.
