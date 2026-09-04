@@ -578,24 +578,55 @@ It found two things immediately:
 **Done when:** ✅ the page renders live data, a proposal can be approved and
 applied from it, the KPIs move, and the audit log records who did it.
 
-## Phase R7 — The demo (half a day, rehearsed)
+## Phase R7 — The demo — **script and tooling done, one prep step pending**
 
-90 seconds, in this order. Rehearse it until it is boring.
+- [x] `DEMO.md` — the ninety seconds beat by beat, with what to run, what to
+      say, the five questions a judge will ask with answers that point at files,
+      and what to do when something breaks.
+- [x] `packs/recon/demo.py` — `status`, `prep`, `one`.
+- [x] The transit database, which the closing fifteen seconds needs and which
+      had never actually been created.
+- [ ] A full agent pass at the raised budget, still running.
 
-1. Upload the settlement file. Rules clear 98.6%; 312 exceptions land in the queue.
-2. Open one exception. The agent works it live — real queries in the trace,
-   including one self-correction. That visible correction is more convincing than a
-   system that never appears to fail.
-3. It proposes a split-settlement link, with evidence.
-4. **Reject** one. **Accept** another. Show the audit log carrying both.
-5. Replay the same file. Idempotency refuses it, out loud.
-6. **Last 15 seconds:** repoint the same runtime at the transit database from
-   `database/14_domain_leakage_check.sql` and ask about station footfall.
+### `demo status` exists because demos fail for boring reasons
 
-Step 6 is where the neutrality finally earns points — a 15-second flex, not the
-thesis. Do not lead with it.
+Eight checks — files ingested, matcher run, proposals waiting, something left
+unworked for the live moment, one file held back, the second database present —
+each printing the command that fixes it. It refuses to say **ready** otherwise.
 
----
+### The restructure that made the demo work
+
+The first draft ran the matcher on stage and it printed **a column of zeros** —
+everything was already matched, so the tier histogram, which is the whole visual,
+had nothing to count. `demo prep` now withdraws one payout file: its batch,
+lines, matches and exceptions are deleted while the other eight keep the
+proposals the queue needs. On stage that file arrives in front of the audience
+and the rules run on it live.
+
+### The transit database did not exist
+
+`database/14_domain_leakage_check.sql` had never been run, so the closing move —
+point the same runtime at an unrelated database and ask about station footfall —
+would have failed on stage. Loaded, and the file amended: it had no grants for
+`data_runtime_reader`, so it created two databases the product could not open,
+and it was not re-runnable. Both fixed.
+
+### The two experiments, done
+
+- **Step budget 6 → 10.** Eight of the first 37 exhausted a budget of 6 while the
+  median proposal took 3 steps, so recall was capped by the ceiling rather than
+  by the model.
+- **A month → a quarter.** 2026-05 through 2026-07: **10,677 lines, 98.94%
+  matched, 277 exceptions, 75 of them nameless** — a queue with enough in it to
+  look like a working day, and enough proposals for the sweep to have a chance
+  of bending.
+
+The pass at the new budget is slow — roughly five minutes per three exceptions —
+so the final agent numbers and a regenerated README block are still to come. The
+demo itself only needs three proposals and has them.
+
+**Done when:** `demo status` says *ready* and the ninety seconds has been run end
+to end without a manual rescue.
 
 # What gets cut
 

@@ -7,6 +7,7 @@
 --
 --   psql -d postgres -f database/14_domain_leakage_check.sql
 
+DROP DATABASE IF EXISTS leakage_check_transit;
 CREATE DATABASE leakage_check_transit;
 \connect leakage_check_transit
 
@@ -49,6 +50,7 @@ CROSS JOIN generate_series(DATE '2025-03-01', DATE '2025-05-31', interval '1 day
 
 \connect postgres
 
+DROP DATABASE IF EXISTS leakage_check_clinic;
 CREATE DATABASE leakage_check_clinic;
 \connect leakage_check_clinic
 
@@ -94,3 +96,19 @@ SELECT a.animal_id,
        round((25 + random() * 300)::numeric, 2)
 FROM animals a
 CROSS JOIN generate_series(1, 4) AS g(n);
+
+-- The app connects to these as the same read-only role it uses everywhere else,
+-- so the demo's closing move - point the runtime at an unrelated database and
+-- ask it a question - needs the grants here too. Without them the file creates
+-- two databases the product cannot open.
+\connect leakage_check_transit
+GRANT CONNECT ON DATABASE leakage_check_transit TO data_runtime_reader;
+GRANT USAGE ON SCHEMA public TO data_runtime_reader;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO data_runtime_reader;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO data_runtime_reader;
+
+\connect leakage_check_clinic
+GRANT CONNECT ON DATABASE leakage_check_clinic TO data_runtime_reader;
+GRANT USAGE ON SCHEMA public TO data_runtime_reader;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO data_runtime_reader;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO data_runtime_reader;

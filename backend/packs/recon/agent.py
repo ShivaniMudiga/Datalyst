@@ -25,7 +25,10 @@ from packs.recon.propose import TOOL_DESCRIPTION, TOOL_PARAMETERS, propose_resol
 from src.datasource.base import create
 from src.llm.zen_client import chat
 
-STEP_BUDGET = 6
+# Raised from 6 after the first full pass: 8 of 37 exhausted the budget while
+# the median proposal took 3 steps, so recall was being capped by the ceiling
+# rather than by the model's ability to reach an answer.
+STEP_BUDGET = int(os.getenv("RECON_STEP_BUDGET", "10"))
 
 SYSTEM = """You are reconciling a payment gateway's settlement file against the
 merchant's own ledger, in PostgreSQL.
@@ -117,7 +120,7 @@ def reader():
     return source, SQLValidator(schema=column_index(source.introspect()))
 
 
-def work(exception: dict, source, validator) -> dict:
+def work(exception: dict, source, validator, trace=None) -> dict:
     """One exception, one proposal, at most STEP_BUDGET model turns."""
     messages = [
         {"role": "system", "content": SYSTEM},
@@ -169,6 +172,8 @@ def work(exception: dict, source, validator) -> dict:
             except Exception as error:
                 result = {"status": "tool_error", "message": str(error)}
 
+            if trace:
+                trace(name, arguments, result)
             messages.append({"role": "tool", "tool_call_id": call.id,
                              "content": json.dumps(result, default=str)})
             if name == "propose_resolution" and result.get("status") == "proposed":
