@@ -5,18 +5,28 @@ import type { ComponentType } from 'react'
 import { ReconLanding } from './recon/Landing'
 import { Reconciliation } from './recon/Reconciliation'
 
-export const packPages: Record<string, ComponentType<{ onBack: () => void }>> = {
+export type PackScreenProps = {
+  theme: 'dark' | 'light'
+  onToggleTheme: () => void
+  user: { email: string } | null
+  connection: { database?: string; db_type?: string } | null
+  onOpenSchema?: () => void
+  onAsk?: () => void
+  onSignOut: () => void
+}
+
+export const packPages: Record<string, ComponentType<PackScreenProps>> = {
   recon: Reconciliation,
 }
 
-/** The front door, when a pack ships one.
- *
- *  The runtime's own landing page cannot describe what this installation is
- *  for - Rule 1 keeps every industry word out of `src/`. So the pack provides
- *  one, and the runtime shows it without knowing what it says. Remove this and
- *  the generic page comes back, unchanged. */
-export const packLanding: ComponentType<{
+/** The pack a signed-in user lands on. Null puts the generic conversation back
+ *  at the front, which is what a runtime with no pack installed does. */
+export const packHome: string | null = 'recon'
+
+/** The front door. The runtime no longer ships a generic one: this
+ *  installation is a single product, and a visitor should land on it. */
+export const PackLanding: ComponentType<{
   theme: 'dark' | 'light'
   onToggleTheme: () => void
   onTry: () => void
-}> | null = ReconLanding
+}> = ReconLanding

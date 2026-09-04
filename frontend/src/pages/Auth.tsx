@@ -59,7 +59,7 @@ export function Auth({ onDone, onBack }: { onDone: (user: AuthUser) => void; onB
             <p className="t-secondary measure mt-2 text-ink-soft">
               {isSignUp
                 ? 'Your database connection and your conversations are private to your account.'
-                : 'Sign in to reach the database you connected.'}
+                : 'Sign in to open the exception queue.'}
             </p>
           </header>
 

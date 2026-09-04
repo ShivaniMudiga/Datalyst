@@ -27,7 +27,8 @@ SELECT (SELECT count(*) FROM settlement_lines)                              AS l
        (SELECT coalesce(sum(net_minor), 0)::bigint FROM settlement_lines)   AS settled_minor,
        (SELECT coalesce(sum(amount_minor), 0)::bigint FROM exceptions
         WHERE status = 'open')                                              AS at_risk_minor,
-       (SELECT count(*) FROM resolutions WHERE state = 'proposed')          AS awaiting_review
+       (SELECT count(*) FROM resolutions WHERE state = 'proposed')          AS awaiting_review,
+       current_database()                                                   AS database
 """
 
 QUEUE = """
