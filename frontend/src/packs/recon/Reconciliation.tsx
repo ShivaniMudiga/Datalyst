@@ -1,7 +1,7 @@
 import { AlertTriangle, Check, ChevronDown, LogOut, MessageSquare, Moon, RotateCcw, ScrollText, Sun, Table2, X } from 'lucide-react'
 import { Logo } from '../../components/Logo'
 import type { PackScreenProps } from '../index'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AuditRow, QueueRow, Summary } from './api'
 import { money, recon } from './api'
 
@@ -113,7 +113,7 @@ function Proposal({ row, busy, onDecide, onApply, onReverse }: {
   )
 }
 
-export function Reconciliation({ theme, onToggleTheme, user, onOpenSchema, onAsk, onSignOut }: PackScreenProps) {
+export function Reconciliation({ theme, onToggleTheme, user, onOpenSchema, onAsk, onUseDatabase, onSignOut }: PackScreenProps) {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [rows, setRows] = useState<QueueRow[]>([])
   const [audit, setAudit] = useState<AuditRow[]>([])
@@ -138,6 +138,19 @@ export function Reconciliation({ theme, onToggleTheme, user, onOpenSchema, onAsk
   }, [reason])
 
   useEffect(() => { void refresh() }, [refresh])
+
+  // The pack reads one database through its own connection; the runtime's active
+  // connection is whatever the user last chose, which may be something else
+  // entirely. Point the runtime at ours, so 'Data model' and 'Ask' describe the
+  // screen the reviewer is looking at rather than an unrelated database. The ref
+  // makes it one request per database, not one per render.
+  const pointed = useRef<string | null>(null)
+  useEffect(() => {
+    if (summary?.database && pointed.current !== summary.database) {
+      pointed.current = summary.database
+      onUseDatabase?.(summary.database)
+    }
+  }, [summary?.database, onUseDatabase])
 
   const act = async (id: number, action: () => Promise<{ status: string; message?: string }>) => {
     setBusy(id)
@@ -166,7 +179,7 @@ export function Reconciliation({ theme, onToggleTheme, user, onOpenSchema, onAsk
               connection - not whatever the runtime happens to have active. */}
           {summary?.database && (
             <span className="t-label rounded-chip border border-rule bg-sunken px-2 py-1 text-ink-faint">
-              {summary.database} · read-only
+              reconciling the {summary.database} ledger · read-only
             </span>
           )}
 
@@ -248,6 +261,33 @@ export function Reconciliation({ theme, onToggleTheme, user, onOpenSchema, onAsk
           ))}
         </div>
 
+        {/* Above the queue, deliberately: the queue is hundreds of rows long, and
+            a panel rendered after it opens below the fold and reads as a dead button. */}
+        {showAudit && (
+          <section className="overflow-hidden rounded-card border border-rule bg-surface">
+            <p className="border-b border-rule bg-sunken px-4 py-2 t-label text-ink-faint">
+              Append-only. Nothing here can be edited, deleted or truncated — by anyone.
+            </p>
+            <table className="w-full text-sm">
+              <tbody>
+                {audit.map((entry) => (
+                  <tr key={entry.audit_id} className="border-t border-rule">
+                    <td className="px-4 py-2 text-ink-faint tabular-nums">{new Date(entry.at).toLocaleString()}</td>
+                    <td className="px-4 py-2 text-ink">{entry.actor}</td>
+                    <td className="px-4 py-2 font-medium text-ink">{entry.action.replaceAll('_', ' ')}</td>
+                    <td className="px-4 py-2 text-ink-faint">
+                      {entry.resolution_id ? `resolution ${entry.resolution_id}` : ''}
+                    </td>
+                  </tr>
+                ))}
+                {audit.length === 0 && (
+                  <tr><td className="px-4 py-6 text-center text-ink-faint">Nothing has happened yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </section>
+        )}
+
         <section className="overflow-hidden rounded-card border border-rule bg-surface">
           <table className="w-full text-sm">
             <thead className="bg-sunken text-left">
@@ -307,30 +347,6 @@ export function Reconciliation({ theme, onToggleTheme, user, onOpenSchema, onAsk
           </table>
         </section>
 
-        {showAudit && (
-          <section className="overflow-hidden rounded-card border border-rule bg-surface">
-            <p className="border-b border-rule bg-sunken px-4 py-2 t-label text-ink-faint">
-              Append-only. Nothing here can be edited, deleted or truncated — by anyone.
-            </p>
-            <table className="w-full text-sm">
-              <tbody>
-                {audit.map((entry) => (
-                  <tr key={entry.audit_id} className="border-t border-rule">
-                    <td className="px-4 py-2 text-ink-faint tabular-nums">{new Date(entry.at).toLocaleString()}</td>
-                    <td className="px-4 py-2 text-ink">{entry.actor}</td>
-                    <td className="px-4 py-2 font-medium text-ink">{entry.action.replaceAll('_', ' ')}</td>
-                    <td className="px-4 py-2 text-ink-faint">
-                      {entry.resolution_id ? `resolution ${entry.resolution_id}` : ''}
-                    </td>
-                  </tr>
-                ))}
-                {audit.length === 0 && (
-                  <tr><td className="px-4 py-6 text-center text-ink-faint">Nothing has happened yet.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </section>
-        )}
       </main>
     </div>
   )
