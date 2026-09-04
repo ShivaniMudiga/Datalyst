@@ -1,19 +1,8 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-
-# Virtual Environment
-.venv/
-
-# Environment Variables
 .env
-
-# macOS
+.venv/
+__pycache__/
+*.pyc
 .DS_Store
-
-# VS Code
-.vscode/
-
-# Logs
-*.log
+node_modules/
+dist/
+payouts/

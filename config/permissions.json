@@ -1,8 +1,0 @@
-{
-    "allowed_operations": [
-        "SELECT",
-        "INSERT",
-        "UPDATE",
-        "DELETE"
-    ]
-}
