@@ -145,6 +145,17 @@ export default function App() {
     setSnapshot(await api.getSchema().catch(() => null))
   }
 
+  // A pack names the database it reads and the runtime activates the matching
+  // connection, so the schema map and the conversation describe the same data the
+  // pack's screen is showing. Silent when there is no such connection: the pack
+  // keeps working through its own, and the runtime simply stays where it was.
+  const useDatabase = async (database: string) => {
+    if (connection?.database === database) return
+    const known = connections.length ? connections : await api.getConnections().catch(() => [])
+    const match = known.find((candidate) => candidate.database === database)
+    if (match) await switchConnection(match.id)
+  }
+
   // A pack's own screen, reached at #pack/<name>. The runtime resolves the name
   // through the registry and renders whatever it finds; it does not know, and
   // must not know, what any pack is for.
@@ -165,6 +176,7 @@ export default function App() {
         connection={connection}
         onOpenSchema={snapshot ? () => { window.location.hash = ''; go('schema') } : undefined}
         onAsk={() => { window.location.hash = ''; go('conversation') }}
+        onUseDatabase={(database) => void useDatabase(database)}
         onSignOut={signOut}
       />
     )

@@ -12,6 +12,10 @@ export type PackScreenProps = {
   connection: { database?: string; db_type?: string } | null
   onOpenSchema?: () => void
   onAsk?: () => void
+  /** A pack reads one database and says which; the runtime points its own
+   *  connection at it. The name crosses the seam as a string, so the runtime
+   *  still never names a database of any domain (Rule 4). */
+  onUseDatabase?: (database: string) => void
   onSignOut: () => void
 }
 
