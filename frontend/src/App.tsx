@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Auth } from './pages/Auth'
 import { Home } from './pages/Home'
-import { Landing } from './pages/Landing'
 import { Schema } from './pages/Schema'
 import { Setup } from './pages/Setup'
-import { packLanding, packPages } from './packs'
+import { PackLanding, packHome, packPages } from './packs'
 import { Unauthorized, api, token } from './services/api'
 import type { AuthUser } from './types/auth'
 import type { Connection, Snapshot } from './types/setup'
 
-type Screen = 'landing' | 'loading' | 'auth' | 'setup' | 'schema' | 'conversation'
+type Screen = 'landing' | 'loading' | 'auth' | 'setup' | 'schema' | 'conversation' | 'pack'
 type Theme = 'dark' | 'light'
 
 export default function App() {
@@ -61,25 +60,45 @@ export default function App() {
     setScreen('landing')
   }, [])
 
-  /** Where a signed-in user belongs: their conversation if they have connected
-   *  a database and read its schema, otherwise setup. */
+  /** Where a signed-in user belongs: the pack's own screen, which is what this
+   *  installation is for. The generic conversation is still built and still
+   *  works; it is simply not the front of the product any more. */
   const resume = useCallback(async () => {
     try {
       const state = await api.getConnection()
       setConnection(state.connection)
       void api.getConnections().then(setConnections).catch(() => setConnections([]))
-      if (!state.connection || !state.has_snapshot) return go('setup')
-      setSnapshot(await api.getSchema())
-      go('conversation')
+      if (state.connection && state.has_snapshot) {
+        setSnapshot(await api.getSchema().catch(() => null))
+      }
+      window.location.hash = packHome ? `#pack/${packHome}` : ''
+      go(packHome ? 'pack' : 'conversation')
     } catch (error) {
       if (error instanceof Unauthorized) {
         token.clear()
         setUser(null)
         return go('auth')
       }
-      go('setup')
+      go(packHome ? 'pack' : 'setup')
     }
   }, [go])
+
+  // Opening #pack/... directly renders the pack before `resume` has ever run,
+  // so the connection and schema are still unloaded and the header cannot offer
+  // the data model. Fetch them once, without changing which screen is showing.
+  useEffect(() => {
+    if (!window.location.hash.startsWith('#pack/') || !token.get() || connection) return
+    void api
+      .me()
+      .then(setUser)
+      .then(() => api.getConnection())
+      .then(async (state) => {
+        setConnection(state.connection)
+        if (state.has_snapshot) setSnapshot(await api.getSchema().catch(() => null))
+        void api.getConnections().then(setConnections).catch(() => setConnections([]))
+      })
+      .catch(() => {})
+  }, [connection])
 
   const enterApp = useCallback(() => {
     go('loading')
@@ -129,20 +148,33 @@ export default function App() {
   // A pack's own screen, reached at #pack/<name>. The runtime resolves the name
   // through the registry and renders whatever it finds; it does not know, and
   // must not know, what any pack is for.
-  const packName = window.location.hash.startsWith('#pack/') ? window.location.hash.slice(6) : null
+  const packName = window.location.hash.startsWith('#pack/')
+    ? window.location.hash.slice(6)
+    : screen === 'pack'
+      ? packHome
+      : null
   const PackPage = packName ? packPages[packName] : undefined
   // Gated on the session token rather than on `user`, which is only resolved
   // once the session has been resumed - a moment later than the first render.
   if (PackPage && token.get()) {
-    return <PackPage onBack={() => { window.location.hash = ''; setScreen('conversation') }} />
+    return (
+      <PackPage
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        user={user}
+        connection={connection}
+        onOpenSchema={snapshot ? () => { window.location.hash = ''; go('schema') } : undefined}
+        onAsk={() => { window.location.hash = ''; go('conversation') }}
+        onSignOut={signOut}
+      />
+    )
   }
 
   if (screen === 'landing') {
-    // A pack may bring its own front door, because the generic one cannot name
-    // what this installation does without breaking Rule 1. With no pack
-    // installed, the generic page is what a visitor sees.
-    const Front = packLanding ?? Landing
-    return <Front theme={theme} onToggleTheme={toggleTheme} onTry={enterApp} />
+    // The pack owns the front door. The generic "connect a database and ask it
+    // questions" page is gone: this installation is one product, and a visitor
+    // should see that product.
+    return <PackLanding theme={theme} onToggleTheme={toggleTheme} onTry={enterApp} />
   }
 
   if (screen === 'loading') {
@@ -164,7 +196,7 @@ export default function App() {
       <Schema
         snapshot={snapshot}
         connection={connection}
-        onBack={back}
+        onBack={() => { window.location.hash = packHome ? `#pack/${packHome}` : ''; go(packHome ? 'pack' : 'conversation') }}
         onRefresh={() => go('setup')}
         onConnectNew={() => go('setup')}
         onStart={() => go('conversation')}

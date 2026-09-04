@@ -16,6 +16,7 @@ export type Summary = {
   settled_minor: number
   at_risk_minor: number
   awaiting_review: number
+  database: string
 }
 
 export type QueueRow = {
