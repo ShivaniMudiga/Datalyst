@@ -16,6 +16,7 @@ this produced.
 from __future__ import annotations
 
 import argparse
+import math
 import re
 from pathlib import Path
 
@@ -32,6 +33,24 @@ TIER_CLASSES = {
 }
 
 THRESHOLDS = (0.50, 0.60, 0.70, 0.80, 0.90, 0.95, 0.99, 1.00)
+
+
+def wilson_low(correct: int, total: int, z: float = 1.96) -> float:
+    """The lower end of a 95% interval on a proportion.
+
+    Twenty out of twenty is not the same claim as two thousand out of two
+    thousand, and reporting either as "1.000" invites the one question there is
+    no good answer to. Wilson rather than the normal approximation, because the
+    normal one gives a zero-width interval at exactly 0 or 1 - which is the case
+    this exists to describe.
+    """
+    if total == 0:
+        return 0.0
+    proportion = correct / total
+    denominator = 1 + z * z / total
+    centre = proportion + z * z / (2 * total)
+    spread = z * math.sqrt(proportion * (1 - proportion) / total + z * z / (4 * total * total))
+    return max(0.0, (centre - spread) / denominator)
 
 
 def rupees(minor: int | None) -> str:
@@ -127,7 +146,8 @@ def agent(cur) -> tuple[str, str]:
          ["...correct", f"{len(correct):,}", ""],
          ["...**wrong - a false positive**", f"**{len(links) - len(correct):,}**", ""],
          ["Declined to link (escalate / write-off)", f"{len(declined):,}", "safe, not correct"],
-         ["**Precision**", f"**{len(correct) / len(links):.3f}**" if links else "-", "of the links it proposed"],
+         ["**Precision**", f"**{len(correct) / len(links):.3f}**" if links else "-",
+          f"of the links it proposed · 95% CI ≥ {wilson_low(len(correct), len(links)):.3f} at n={len(links)}"],
          ["**Recall**", f"**{len(correct) / residual:.3f}**", "of the residual it resolved"],
          ["Steps per proposal (median)", f"{sorted(steps)[len(steps) // 2] if steps else 0}", ""],
          ["Validator corrections", f"{sum(p['corrections'] or 0 for p in proposals)}", "caught mid-investigation"],
@@ -144,9 +164,10 @@ def agent(cur) -> tuple[str, str]:
         wrong = len(above) - len(right)
         rows.append([f"{threshold:.2f}", f"{len(above)}", f"{len(right)}", f"**{wrong}**",
                      f"{len(right) / len(above):.3f}" if above else "-",
+                     f"{wilson_low(len(right), len(above)):.3f}" if above else "-",
                      f"{len(right) / residual:.3f}"])
-    sweep = table(["Auto-apply at ≥", "Applied", "Correct", "False positives", "Precision", "Recall"],
-                  rows, "lrrrrr")
+    sweep = table(["Auto-apply at ≥", "Applied", "Correct", "False positives",
+                   "Precision", "95% CI ≥", "Recall"], rows, "lrrrrrr")
     return summary, sweep
 
 
@@ -179,6 +200,11 @@ it. Declining is safe but not correct - it leaves the line in the queue.
 
 Nothing is applied without review today. This is what it would cost if it were,
 and it is the honest answer to "what is your false-positive rate".
+
+The curve is flat because there are no errors to trade off yet. At this sample
+size that is a statement about the sample, not a claim of perfection - the
+interval column is the honest reading, and the bar to raise is *recall*, not
+precision.
 
 {sweep_table}"""
 

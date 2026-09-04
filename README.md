@@ -21,7 +21,68 @@ matcher nor the agent can read those labels — the reader role has no grant on
 that table, and the self-checks assert it.
 
 <!-- eval:start -->
-_Not yet generated._
+### Coverage
+
+|  | Lines | Value (INR) |
+|---|---:|---:|
+| Settled in the period | 4,636 | 12,408,981 |
+| Matched by rule | 4,582 | 12,267,473 |
+| Matched by an approved proposal | 1 |  |
+| **Match rate** | **98.86%** |  |
+| Still in the queue | 130 | 361,046 |
+
+### The rules, per tier
+
+Precision is how many of a tier's claims name the payment that truly issued the
+line. Recall is how much of the work that tier is responsible for it actually
+did.
+
+| Tier | Responsible for | Present | Claimed | Precision | Recall |
+|---|---|---:|---:|---:|---:|
+| T0 | clean | 4,090 | 4,090 | 1.000 | 1.000 |
+| T1 | ref_drift, date_skew | 231 | 231 | 1.000 | 1.000 |
+| T1b | ref_missing | 83 | 46 | 1.000 | 0.554 |
+| T2 | split | 149 | 149 | 1.000 | 1.000 |
+| T3 | fee_residual, fx | 66 | 66 | 1.000 | 1.000 |
+
+### The agent, on what the rules cannot reach
+
+Every one of these lines has a real counterpart; the gateway simply did not name
+it. Declining is safe but not correct - it leaves the line in the queue.
+
+|  | Count |  |
+|---|---:|---|
+| Nameless lines no rule can reach | 37 |  |
+| Proposed a link | 20 |  |
+| ...correct | 20 |  |
+| ...**wrong - a false positive** | **0** |  |
+| Declined to link (escalate / write-off) | 9 | safe, not correct |
+| **Precision** | **1.000** | of the links it proposed · 95% CI ≥ 0.839 at n=20 |
+| **Recall** | **0.541** | of the residual it resolved |
+| Steps per proposal (median) | 3 |  |
+| Validator corrections | 9 | caught mid-investigation |
+| Latency p50 / p95 | 32.9s / 68.2s |  |
+
+### If proposals were applied without review
+
+Nothing is applied without review today. This is what it would cost if it were,
+and it is the honest answer to "what is your false-positive rate".
+
+The curve is flat because there are no errors to trade off yet. At this sample
+size that is a statement about the sample, not a claim of perfection - the
+interval column is the honest reading, and the bar to raise is *recall*, not
+precision.
+
+| Auto-apply at ≥ | Applied | Correct | False positives | Precision | 95% CI ≥ | Recall |
+|---|---:|---:|---:|---:|---:|---:|
+| 0.50 | 20 | 20 | **0** | 1.000 | 0.839 | 0.541 |
+| 0.60 | 20 | 20 | **0** | 1.000 | 0.839 | 0.541 |
+| 0.70 | 20 | 20 | **0** | 1.000 | 0.839 | 0.541 |
+| 0.80 | 19 | 19 | **0** | 1.000 | 0.832 | 0.514 |
+| 0.90 | 17 | 17 | **0** | 1.000 | 0.816 | 0.459 |
+| 0.95 | 14 | 14 | **0** | 1.000 | 0.785 | 0.378 |
+| 0.99 | 6 | 6 | **0** | 1.000 | 0.610 | 0.162 |
+| 1.00 | 4 | 4 | **0** | 1.000 | 0.510 | 0.108 |
 <!-- eval:end -->
 
 ## How it fits together
