@@ -104,7 +104,10 @@ def _client() -> OpenAI:
         api_key = os.getenv("ZEN_API_KEY")
         if not api_key:
             raise RuntimeError("ZEN_API_KEY is not configured.")
-        client = OpenAI(api_key=api_key, base_url="https://opencode.ai/zen/v1")
+        # Overridable because a provider can withdraw a model out from under you
+        # on the morning you need it. Any OpenAI-compatible endpoint will do.
+        base_url = os.getenv("ZEN_BASE_URL", "https://opencode.ai/zen/v1")
+        client = OpenAI(api_key=api_key, base_url=base_url)
     return client
 
 
