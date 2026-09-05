@@ -81,9 +81,15 @@ def main() -> None:
         # ...and a line carrying only free text must not be, because no rule here
         #    reads free text. Reading it is probabilistic, so it has to be
         #    proposed and verified rather than applied by a rule.
+        #
+        #    `matched_by` is the whole point of the distinction: an approved
+        #    proposal may legitimately match one of these, and until the first
+        #    one was actually applied this assertion could not tell the two
+        #    apart. It counted a person's decision as a rule overstepping.
         guessed = one(cur, f"""
             SELECT count(*) AS value FROM settlement_lines l
-            JOIN matches m ON m.line_id = l.line_id WHERE {NAMELESS}""")
+            JOIN matches m ON m.line_id = l.line_id
+            WHERE {NAMELESS} AND m.matched_by = 'rule'""")
         assert guessed == 0, f"{guessed} nameless lines were matched by a rule - that is the agent's work"
 
         # 4. Only splits may claim a payment more than once, and then only as the

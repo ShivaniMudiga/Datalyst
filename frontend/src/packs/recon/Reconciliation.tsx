@@ -1,5 +1,7 @@
-import { AlertTriangle, Check, ChevronDown, RotateCcw, ScrollText, X } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { AlertTriangle, Check, ChevronDown, LogOut, MessageSquare, Moon, RotateCcw, ScrollText, Sun, Table2, X } from 'lucide-react'
+import { Logo } from '../../components/Logo'
+import type { PackScreenProps } from '../index'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AuditRow, QueueRow, Summary } from './api'
 import { money, recon } from './api'
 
@@ -111,7 +113,7 @@ function Proposal({ row, busy, onDecide, onApply, onReverse }: {
   )
 }
 
-export function Reconciliation({ onBack }: { onBack: () => void }) {
+export function Reconciliation({ theme, onToggleTheme, user, onOpenSchema, onAsk, onUseDatabase, onSignOut }: PackScreenProps) {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [rows, setRows] = useState<QueueRow[]>([])
   const [audit, setAudit] = useState<AuditRow[]>([])
@@ -137,6 +139,19 @@ export function Reconciliation({ onBack }: { onBack: () => void }) {
 
   useEffect(() => { void refresh() }, [refresh])
 
+  // The pack reads one database through its own connection; the runtime's active
+  // connection is whatever the user last chose, which may be something else
+  // entirely. Point the runtime at ours, so 'Data model' and 'Ask' describe the
+  // screen the reviewer is looking at rather than an unrelated database. The ref
+  // makes it one request per database, not one per render.
+  const pointed = useRef<string | null>(null)
+  useEffect(() => {
+    if (summary?.database && pointed.current !== summary.database) {
+      pointed.current = summary.database
+      onUseDatabase?.(summary.database)
+    }
+  }, [summary?.database, onUseDatabase])
+
   const act = async (id: number, action: () => Promise<{ status: string; message?: string }>) => {
     setBusy(id)
     try {
@@ -155,16 +170,59 @@ export function Reconciliation({ onBack }: { onBack: () => void }) {
 
   return (
     <div className="min-h-dvh bg-ground">
-      <header className="border-b border-rule bg-surface px-6 py-4">
-        <div className="mx-auto flex max-w-6xl items-center gap-3">
-          <button onClick={onBack} className="t-label text-ink-faint hover:text-ink">← Back</button>
-          <h1 className="text-lg font-semibold text-ink">Reconciliation</h1>
-          <button
-            onClick={() => setShowAudit((current) => !current)}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-chip border border-rule px-3 py-1.5 text-sm text-ink-mid"
-          >
-            <ScrollText size={14} /> {showAudit ? 'Hide' : 'Show'} audit log
-          </button>
+      <header className="border-b border-rule bg-surface px-6 py-3">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3">
+          <Logo withWordmark />
+          <span className="hidden text-ink-faint sm:inline">/</span>
+          <h1 className="font-semibold text-ink">Reconciliation</h1>
+          {/* The database being reconciled, which the pack reads through its own
+              connection - not whatever the runtime happens to have active. */}
+          {summary?.database && (
+            <span className="t-label rounded-chip border border-rule bg-sunken px-2 py-1 text-ink-faint">
+              reconciling the {summary.database} ledger · read-only
+            </span>
+          )}
+
+          <div className="ml-auto flex items-center gap-1.5">
+            {onOpenSchema && (
+              <button
+                onClick={onOpenSchema}
+                className="inline-flex items-center gap-1.5 rounded-chip border border-rule px-3 py-1.5 text-sm text-ink-mid hover:text-ink"
+              >
+                <Table2 size={14} /> Data model
+              </button>
+            )}
+            {onAsk && (
+              <button
+                onClick={onAsk}
+                title="Ask the database a question directly - the same engine, any database"
+                className="inline-flex items-center gap-1.5 rounded-chip border border-rule px-3 py-1.5 text-sm text-ink-mid hover:text-ink"
+              >
+                <MessageSquare size={14} /> Ask
+              </button>
+            )}
+            <button
+              onClick={() => setShowAudit((current) => !current)}
+              className="inline-flex items-center gap-1.5 rounded-chip border border-rule px-3 py-1.5 text-sm text-ink-mid hover:text-ink"
+            >
+              <ScrollText size={14} /> {showAudit ? 'Hide' : 'Show'} audit log
+            </button>
+            <button
+              onClick={onToggleTheme}
+              aria-label="Switch theme"
+              className="rounded-chip p-2 text-ink-faint hover:text-ink"
+            >
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+            <button
+              onClick={onSignOut}
+              aria-label="Sign out"
+              title={user?.email ?? 'Sign out'}
+              className="rounded-chip p-2 text-ink-faint hover:text-ink"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -202,6 +260,33 @@ export function Reconciliation({ onBack }: { onBack: () => void }) {
             </button>
           ))}
         </div>
+
+        {/* Above the queue, deliberately: the queue is hundreds of rows long, and
+            a panel rendered after it opens below the fold and reads as a dead button. */}
+        {showAudit && (
+          <section className="overflow-hidden rounded-card border border-rule bg-surface">
+            <p className="border-b border-rule bg-sunken px-4 py-2 t-label text-ink-faint">
+              Append-only. Nothing here can be edited, deleted or truncated — by anyone.
+            </p>
+            <table className="w-full text-sm">
+              <tbody>
+                {audit.map((entry) => (
+                  <tr key={entry.audit_id} className="border-t border-rule">
+                    <td className="px-4 py-2 text-ink-faint tabular-nums">{new Date(entry.at).toLocaleString()}</td>
+                    <td className="px-4 py-2 text-ink">{entry.actor}</td>
+                    <td className="px-4 py-2 font-medium text-ink">{entry.action.replaceAll('_', ' ')}</td>
+                    <td className="px-4 py-2 text-ink-faint">
+                      {entry.resolution_id ? `resolution ${entry.resolution_id}` : ''}
+                    </td>
+                  </tr>
+                ))}
+                {audit.length === 0 && (
+                  <tr><td className="px-4 py-6 text-center text-ink-faint">Nothing has happened yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </section>
+        )}
 
         <section className="overflow-hidden rounded-card border border-rule bg-surface">
           <table className="w-full text-sm">
@@ -262,30 +347,6 @@ export function Reconciliation({ onBack }: { onBack: () => void }) {
           </table>
         </section>
 
-        {showAudit && (
-          <section className="overflow-hidden rounded-card border border-rule bg-surface">
-            <p className="border-b border-rule bg-sunken px-4 py-2 t-label text-ink-faint">
-              Append-only. Nothing here can be edited, deleted or truncated — by anyone.
-            </p>
-            <table className="w-full text-sm">
-              <tbody>
-                {audit.map((entry) => (
-                  <tr key={entry.audit_id} className="border-t border-rule">
-                    <td className="px-4 py-2 text-ink-faint tabular-nums">{new Date(entry.at).toLocaleString()}</td>
-                    <td className="px-4 py-2 text-ink">{entry.actor}</td>
-                    <td className="px-4 py-2 font-medium text-ink">{entry.action.replaceAll('_', ' ')}</td>
-                    <td className="px-4 py-2 text-ink-faint">
-                      {entry.resolution_id ? `resolution ${entry.resolution_id}` : ''}
-                    </td>
-                  </tr>
-                ))}
-                {audit.length === 0 && (
-                  <tr><td className="px-4 py-6 text-center text-ink-faint">Nothing has happened yet.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </section>
-        )}
       </main>
     </div>
   )

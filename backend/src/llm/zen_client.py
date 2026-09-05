@@ -104,7 +104,10 @@ def _client() -> OpenAI:
         api_key = os.getenv("ZEN_API_KEY")
         if not api_key:
             raise RuntimeError("ZEN_API_KEY is not configured.")
-        client = OpenAI(api_key=api_key, base_url="https://opencode.ai/zen/v1")
+        # Overridable because a provider can withdraw a model out from under you
+        # on the morning you need it. Any OpenAI-compatible endpoint will do.
+        base_url = os.getenv("ZEN_BASE_URL", "https://opencode.ai/zen/v1")
+        client = OpenAI(api_key=api_key, base_url=base_url)
     return client
 
 
@@ -121,7 +124,13 @@ def _with_retry(call):
     """
     from openai import APIConnectionError, APIStatusError, APITimeoutError
 
-    for attempt in range(RETRIES):
+    # At least one attempt, always. LLM_RETRIES=0 used to skip the loop
+    # entirely and then raise an UnboundLocalError over the failure it never
+    # had - a confusing way to report a configuration mistake.
+    attempts = max(1, RETRIES)
+    last: Exception = RuntimeError("the model was never called")
+
+    for attempt in range(attempts):
         try:
             return call()
         except (APIConnectionError, APITimeoutError) as error:
@@ -130,7 +139,7 @@ def _with_retry(call):
             if error.status_code < 500 and error.status_code != 429:
                 raise
             last = error
-        if attempt < RETRIES - 1:
+        if attempt < attempts - 1:
             time.sleep(2**attempt + random.random())
     raise last
 

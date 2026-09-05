@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from psycopg import sql
+
 from src.db.connection import ROW_CAP, data_cursor
 from src.validator.sql_validator import SQLValidator
 from src.validator.validation_result import ValidationResult
@@ -106,7 +108,13 @@ Working with this database:
             for name in names:
                 # ponytail: exact count. Swap to pg_class.reltuples if a table
                 # ever gets big enough that this makes setup feel slow.
-                cursor.execute(f'SELECT count(*) AS n FROM public."{name}"')
+                #
+                # Composed rather than interpolated: these names come from
+                # information_schema, but an identifier may legally contain a
+                # double quote, which hand-quoting would end early.
+                cursor.execute(
+                    sql.SQL("SELECT count(*) AS n FROM public.{}").format(sql.Identifier(name))
+                )
                 row_counts[name] = cursor.fetchone()["n"]
 
         primary_keys: dict[str, set[str]] = {}
